@@ -1,36 +1,38 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Collab Concierge landing page
 
-## Getting Started
+Benable's landing page for Collab Concierge: one link for local businesses that get creator collab DMs on Instagram.
 
-First, run the development server:
+## Run it
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## What's on the page
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Intro**: collab DMs arrive one by one as a notification stack with a running count, then fold into "All handled by Benable" while the hero fades in. Click, scroll or press any key to skip. Skipped automatically for visitors who prefer reduced motion.
+- **Hero**: headline, one-line explanation, two CTAs, and a real iPhone 16 Pro frame. Inside it, Instagram's DM UI is built at true iOS size (402 by 874 points) and scaled to fit. The `foundcoffee` inbox gets a new DM from Mia, the thread opens, the café pastes the Benable reply, Mia fills it in, and a Mail notification from Benable says she's worth a yes. It loops every 16 seconds. The script lives in `src/components/Phone.tsx`.
+- **Trust line**: "Trusted by 35,000+ brands and businesses" under the hero buttons, and again as the giant count-up stat.
+- **Sections**: a problem bento (the four questions), an auto-advancing "How it works" tab panel, a sticky "What we check" section whose report card updates as you scroll, the 35,000+ stat, a moving wall of Benable creators with the bags photo, the FAQ, and a closing call to action with the form over a giant Benable wordmark.
 
-## Learn More
+## Design system
 
-To learn more about Next.js, take a look at the following resources:
+Inspired by zorcha.com, adapted to Benable. Only the hero headline uses Benable's National 2 Narrow. Every other heading and all body text use Inter (400, 500, 600, 700). Icons come from Remix Icon (`@remixicon/react`), except the Instagram and iOS screens inside the phone, which keep their own icons. Ink is deep indigo (`--ink`), and the page is cool off-white. Shared pieces live in `src/app/globals.css` (tokens, pill labels, buttons, cards, dot grid) and `src/components/ui.tsx`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Brand assets
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `public/fonts`: National 2 Narrow, pulled from benable.com (same files the main site serves).
+- `public/img/bags.png`: the two creators with Benable bags, cut out from benable.com's "earn money" callout.
+- `public/img/creators`: the featured-creator tiles from benable.com.
+- Colors and the headline gradient match benable.com's CSS.
 
-## Deploy on Vercel
+The form in "Get your link" is front-end only. Wire `src/components/ClaimLink.tsx` to a real endpoint before launch.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Image credits
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- iPhone 16 Pro frame: Apple Design Resources, via github.com/jamesjingyi/mockup-device-frames. Check Apple's terms before using it in paid ads.
+- Instagram DM UI icons in `public/img/ig/ui`: exported from the Brands Collab Deck Figma file, Outreach assets page, "IG UI" frames (nodes 519:4568 and 516:2440). The thread layout follows those frames point for point.
+- DM avatars in `public/img/ig`: Unsplash, free to use under the Unsplash License. Swap them for real Benable creators if Tony prefers.
