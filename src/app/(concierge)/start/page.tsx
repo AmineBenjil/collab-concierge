@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Onboarding from "@/components/Onboarding";
+import Setup from "@/components/concierge/Setup";
 
 export const metadata: Metadata = {
   title: "Set up your Concierge · Benable",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function StartPage() {
-  return <Onboarding />;
+  return <Setup />;
 }

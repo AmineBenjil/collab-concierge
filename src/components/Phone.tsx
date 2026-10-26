@@ -16,10 +16,10 @@ import { usePhoneBrand } from "./handle";
   -> Paste -> send -> Mia replies -> keyboard down -> swipe back to inbox ->
   another DM arrives -> Benable notification: Mia is checked, see her in your dashboard.
 */
-const SCREEN = { left: 7.255, top: 3.579, width: 85.775, height: 92.842 };
-const PT_W = 375;
-const PT_H = 815;
-const FRAME_RATIO = 1411 / 703;
+export const SCREEN = { left: 7.255, top: 3.579, width: 85.775, height: 92.842 };
+export const PT_W = 375;
+export const PT_H = 815;
+export const FRAME_RATIO = 1411 / 703;
 const IOS_EASE = [0.32, 0.72, 0, 1] as const;
 const KB_EASE = [0.25, 0.9, 0.3, 1] as const;
 const SOFT = { type: "spring", stiffness: 240, damping: 32, mass: 0.9 } as const;
@@ -274,7 +274,7 @@ function TouchDot({ touch }: { touch: Touch }) {
 
 /* ---------- iOS status bar (Figma: Status Bar - iPhone) ---------- */
 
-function StatusBar() {
+export function StatusBar() {
   return (
     <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-[54px]">
       <span className="absolute left-0 top-[14.3px] w-[134px] text-center text-[17px] font-semibold leading-[22px] text-black">9:41</span>

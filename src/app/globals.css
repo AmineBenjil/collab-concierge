@@ -35,6 +35,17 @@
 
 html { scroll-behavior: smooth; }
 
+/* Tailwind v4 resets buttons to the arrow cursor; anything clickable gets the hand back.
+   In the base layer so a cursor-* utility can still override it. */
+@layer base {
+  a[href], button, [role="button"], [role="tab"], label[for], select, summary, input[type="checkbox"], input[type="radio"] {
+    cursor: pointer;
+  }
+  :disabled, [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
 body {
   background: var(--bg);
   color: var(--ink);
@@ -274,6 +285,20 @@ h3 { letter-spacing: -0.025em; line-height: 1.15; }
   .moment-title { font-size: 52px; }
   .moment-sub { font-size: 20px; }
 }
+
+/* app screens (share, dashboard): the moment style, smaller; one size so the two tabs match */
+.dash-title {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+  color: #1c1c1c;
+  text-wrap: balance;
+  font-size: 24px;
+}
+@media (min-width: 640px) { .dash-title { font-size: 32px; } }
+/* the creator's request form lives in a phone-width column, so its titles stay one size */
+.flow-title { font-family: var(--font-sans); font-weight: 800; letter-spacing: -0.035em; line-height: 1.06; color: #1c1c1c; text-wrap: balance; font-size: 32px; }
 
 /* browsers paint autofilled fields pale blue; keep our white pills white */
 input:-webkit-autofill,

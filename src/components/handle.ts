@@ -1,6 +1,9 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { cleanHandle, displayName } from "./names";
+
+export { cleanHandle, displayName };
 
 /*
   The handle a business is typing into the hero. The phone mock listens so its inbox
@@ -9,19 +12,6 @@ import { useSyncExternalStore } from "react";
 
 const listeners = new Set<() => void>();
 let draft = "";
-
-export function cleanHandle(raw: string) {
-  return raw.trim().replace(/^@+/, "").replace(/\s+/g, "").toLowerCase();
-}
-
-/* "found.coffee" → "Found Coffee", "tony" → "Tony" */
-export function displayName(handle: string) {
-  return handle
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((w) => w[0].toUpperCase() + w.slice(1))
-    .join(" ");
-}
 
 export function setDraftHandle(raw: string) {
   const next = cleanHandle(raw);

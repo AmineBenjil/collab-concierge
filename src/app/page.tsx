@@ -1,7 +1,6 @@
 import BrandStrip from "@/components/BrandStrip";
 import Checks from "@/components/Checks";
 import Closing from "@/components/Closing";
-import ControlPanel from "@/components/ControlPanel";
 import CreatorCarousel from "@/components/CreatorCarousel";
 import FAQ from "@/components/FAQ";
 import Hero from "@/components/Hero";
@@ -28,7 +27,6 @@ export default function Home() {
         <FAQ />
       </main>
       <Closing />
-      <ControlPanel />
     </IntroProvider>
   );
 }
