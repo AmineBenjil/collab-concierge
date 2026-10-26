@@ -1,6 +1,6 @@
 "use client";
 
-import { RiArrowLeftLine, RiRefreshLine } from "@remixicon/react";
+import { RiArrowLeftLine, RiArrowLeftSLine, RiArticleLine, RiLockFill, RiLoopRightLine, RiMoreFill, RiRefreshLine } from "@remixicon/react";
 import { motion } from "motion/react";
 import Link from "next/link";
 import { useLayoutEffect, useRef, useState } from "react";
@@ -117,18 +117,18 @@ function SafariBar() {
     <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 bg-white" style={{ height: BAR }} aria-hidden="true">
       <div className="flex items-center gap-[10px] px-[14px] pt-[6px]">
         <span className="grid h-[44px] w-[44px] shrink-0 place-items-center rounded-full" style={IOS_GLASS}>
-          <svg width="12" height="20" viewBox="0 0 12 20" fill="none"><path d="M10 2 2 10l8 8" stroke="#000" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <RiArrowLeftSLine size={30} color="#000" />
         </span>
         <span className="relative flex h-[44px] min-w-0 flex-1 items-center justify-center rounded-full" style={IOS_GLASS}>
-          <svg className="absolute left-[14px]" width="20" height="16" viewBox="0 0 20 16" fill="none"><rect x="1" y="1" width="18" height="14" rx="3.5" stroke="#000" strokeWidth="1.6" /><path d="M5 5.5h10M5 8h10M5 10.5h6" stroke="#000" strokeWidth="1.4" strokeLinecap="round" /></svg>
+          <RiArticleLine size={20} color="#000" className="absolute left-[14px]" />
           <span className="flex items-center gap-[4px] text-[15px] font-medium tracking-[-0.2px] text-black">
-            <svg width="9" height="12" viewBox="0 0 9 12" fill="none"><rect x="0.5" y="5" width="8" height="6.5" rx="1.4" fill="#000" /><path d="M2.2 5V3.6a2.3 2.3 0 0 1 4.6 0V5" stroke="#000" strokeWidth="1.3" /></svg>
+            <RiLockFill size={13} color="#000" />
             benable.com
           </span>
-          <svg className="absolute right-[14px]" width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v4.5h-4.5" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <RiLoopRightLine size={18} color="#000" className="absolute right-[14px]" />
         </span>
         <span className="grid h-[44px] w-[44px] shrink-0 place-items-center rounded-full" style={IOS_GLASS}>
-          <svg width="20" height="4" viewBox="0 0 20 4" fill="#000"><circle cx="2" cy="2" r="2" /><circle cx="10" cy="2" r="2" /><circle cx="18" cy="2" r="2" /></svg>
+          <RiMoreFill size={26} color="#000" />
         </span>
       </div>
       <div className="absolute bottom-[8px] left-1/2 h-[5px] w-[134px] -translate-x-1/2 rounded-full bg-black" />

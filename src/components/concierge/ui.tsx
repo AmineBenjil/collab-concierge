@@ -83,7 +83,7 @@ export function CopyButton({ text, label, dark = false, className = "" }: { text
         dark ? "pl-4 pr-6" : "border-[0.5px] pl-[15.5px] pr-[23.5px] shadow-[0_4px_7px_rgba(0,0,0,0.08)]"
       } ${tone} ${className}`}
     >
-      {copied ? <RiCheckLine size={16} aria-hidden="true" className="shrink-0" /> : <RiFileCopyLine size={16} aria-hidden="true" className="shrink-0" />}
+      {copied ? <RiCheckLine size={18} aria-hidden="true" className="shrink-0" /> : <RiFileCopyLine size={16} aria-hidden="true" className="shrink-0" />}
       {/* both labels share one grid cell, so the button keeps the wider one's width either way */}
       <span className="grid justify-items-center">
         <span className={`col-start-1 row-start-1 ${copied ? "invisible" : ""}`}>{label}</span>

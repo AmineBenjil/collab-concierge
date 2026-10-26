@@ -1,5 +1,6 @@
 "use client";
 
+import { RiArrowDownSLine, RiArrowUpFill, RiCameraLine, RiDeleteBack2Line, RiEditBoxLine, RiEmotionHappyLine, RiLineChartLine, RiMicLine, RiSearchLine, RiSendPlaneLine } from "@remixicon/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useIntro } from "./IntroContext";
@@ -353,11 +354,11 @@ function Keyboard() {
         <div className="flex justify-center gap-[6px]">{ROW2.map((k) => <Key key={k} w={keyW}>{k}</Key>)}</div>
         <div className="flex items-center justify-between">
           <Key w={42}>
-            <svg width="20" height="18" viewBox="0 0 20 18" aria-hidden="true"><path d="M10 1 1.5 10H6v7h8v-7h4.5z" fill="#000" /></svg>
+            <RiArrowUpFill size={22} color="#000" aria-hidden="true" />
           </Key>
           <div className="flex gap-[6px]">{ROW3.map((k) => <Key key={k} w={keyW}>{k}</Key>)}</div>
           <Key w={42} grey>
-            <svg width="24" height="18" viewBox="0 0 24 18" fill="none" aria-hidden="true"><path d="M7.5 1.5h13a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-13L1.5 9z" stroke="#000" strokeWidth="1.5" strokeLinejoin="round" /><path d="m11 6 6 6m0-6-6 6" stroke="#000" strokeWidth="1.5" strokeLinecap="round" /></svg>
+            <RiDeleteBack2Line size={24} color="#000" aria-hidden="true" />
           </Key>
         </div>
         <div className="flex gap-[6px]">
@@ -368,8 +369,8 @@ function Keyboard() {
       </div>
       {/* bottom bar: emoji + dictation */}
       <div className="relative mt-[4px] h-[60px]">
-        <svg className="absolute left-[24px] top-[12px]" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#50555c" strokeWidth="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9.5" /><path d="M8 14.5c1 1.4 2.4 2 4 2s3-.6 4-2" strokeLinecap="round" /><circle cx="9" cy="10" r="1" fill="#50555c" stroke="none" /><circle cx="15" cy="10" r="1" fill="#50555c" stroke="none" /></svg>
-        <svg className="absolute right-[24px] top-[12px]" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#50555c" strokeWidth="1.6" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" strokeLinecap="round" /></svg>
+        <RiEmotionHappyLine size={28} color="#50555c" aria-hidden="true" className="absolute left-[24px] top-[12px]" />
+        <RiMicLine size={28} color="#50555c" aria-hidden="true" className="absolute right-[24px] top-[12px]" />
       </div>
     </div>
   );
@@ -399,10 +400,10 @@ function Inbox({ view }: { view: State }) {
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`${UI}/back.svg`} alt="" width={24} height={24} />
         <span className="ml-3 max-w-[200px] truncate text-[20px] font-bold tracking-[-0.4px]">{brand.handle}</span>
-        <svg width="12" height="12" viewBox="0 0 24 24" className="ml-1" aria-hidden="true"><path d="m5 9 7 7 7-7" fill="none" stroke={C.ink} strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        <RiArrowDownSLine size={18} color={C.ink} aria-hidden="true" className="ml-0.5" />
         <span className="ml-auto flex items-center gap-4">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></svg>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.ink} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3H6a3 3 0 0 0-3 3v12a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3v-6" /><path d="M18.4 2.6a2 2 0 0 1 2.9 2.9L12 14.8l-4 1 1-4z" /></svg>
+          <RiLineChartLine size={24} color={C.ink} aria-hidden="true" />
+          <RiEditBoxLine size={24} color={C.ink} aria-hidden="true" />
         </span>
       </div>
 
@@ -489,7 +490,7 @@ function Row({ img, name, preview, time, unread, pressed }: { img: string; name:
       {unread ? (
         <span className="h-2 w-2 shrink-0 rounded-full bg-[#0095f6]" />
       ) : (
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={C.grey} strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6H7l1.5-2h7L17 6h1.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z" /><circle cx="12" cy="13" r="3.8" /></svg>
+        <RiCameraLine size={24} color={C.grey} aria-hidden="true" />
       )}
     </div>
   );
@@ -645,17 +646,12 @@ function Composer({ state }: { state: State }) {
             height={34}
             className={`absolute inset-0 transition-[opacity,transform] duration-200 ${typed ? "scale-75 opacity-0" : "scale-100 opacity-100"}`}
           />
-          <svg
-            width="34"
-            height="34"
-            viewBox="0 0 34 34"
-            fill="none"
+          <span
             aria-hidden="true"
-            className={`absolute inset-0 transition-[opacity,transform] duration-200 ${typed ? "scale-100 opacity-100" : "scale-75 opacity-0"}`}
+            className={`absolute inset-0 grid place-items-center transition-[opacity,transform] duration-200 ${typed ? "scale-100 opacity-100" : "scale-75 opacity-0"}`}
           >
-            <circle cx="15.5" cy="15.5" r="7" stroke={C.outgoing} strokeWidth="2.2" />
-            <path d="m20.6 20.6 5.2 5.2" stroke={C.outgoing} strokeWidth="2.2" strokeLinecap="round" />
-          </svg>
+            <RiSearchLine size={22} color={C.outgoing} />
+          </span>
         </div>
 
         {/* text */}
@@ -688,7 +684,7 @@ function Composer({ state }: { state: State }) {
           className={`absolute bottom-[4px] right-[4px] grid h-[34px] w-[44px] place-items-center rounded-full transition-[opacity,transform] duration-200 ${typed ? "scale-100 opacity-100" : "scale-75 opacity-0"}`}
           style={{ background: C.outgoing }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21 3 10.2 13.8M21 3l-6.6 18-4.2-7.2L3 9.6z" stroke="#fff" strokeWidth="2.1" strokeLinejoin="round" strokeLinecap="round" /></svg>
+          <RiSendPlaneLine size={18} color="#fff" aria-hidden="true" />
         </span>
       </motion.div>
     </div>

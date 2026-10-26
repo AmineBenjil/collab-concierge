@@ -665,8 +665,12 @@ function Feedback() {
             </div>
           </form>
         ) : (
-          <button type="button" onClick={() => setOpen(true)} className={`${soft} rounded-[12px] border-[0.5px] border-[#e3e3e3]`}>
-            Give feedback
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="inline-flex h-10 items-center justify-center rounded-[12px] border border-[#e3e3e3] bg-white px-4 text-[14.5px] font-medium leading-[21.75px] text-[#161a35] transition-colors hover:bg-[#fafafa]"
+          >
+            Give us feedback
           </button>
         )}
       </div>
