@@ -1,7 +1,8 @@
 "use client";
 
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
+import { focusHandleInput } from "./HandleForm";
 import Logo from "./Logo";
 import { useControls } from "./controls";
 import { useIntro } from "./IntroContext";
@@ -13,6 +14,11 @@ const LINKS = [
   { href: "#pricing", label: "Pricing" },
   { href: "#faq", label: "FAQ" },
 ];
+
+// "Get your link" goes to the hero's handle field instead of jumping to the form at the bottom of the page
+function focusHeroInput(e: MouseEvent<HTMLAnchorElement>) {
+  if (focusHandleInput("#hero-claim")) e.preventDefault();
+}
 
 export default function Nav() {
   const { done } = useIntro();
@@ -54,7 +60,7 @@ export default function Nav() {
             </a>
           ))}
         </div>
-        <a href="#claim" className={`btn shrink-0 !rounded-[12px] !py-[9px] !pl-4 !pr-4 text-[14px] ${dark ? "btn-dark" : "btn-light"}`}>
+        <a href="#claim" onClick={focusHeroInput} className={`btn shrink-0 !rounded-[12px] !py-[9px] !pl-4 !pr-4 text-[14px] ${dark ? "btn-dark" : "btn-light"}`}>
           Get your link
         </a>
       </nav>

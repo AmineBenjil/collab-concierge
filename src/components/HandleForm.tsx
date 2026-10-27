@@ -16,6 +16,18 @@ type Status = "idle" | "searching" | "match" | "confirmed";
   Submit looks the account up, asks "is this you?" on a card that floats under the pill
   (nothing around it moves), then hands off to the setup page.
 */
+// brings a handle field into view (a little above the middle of the screen) and puts the cursor in it,
+// so it shows its active, ready-to-type state; returns false if the field isn't on the page
+export function focusHandleInput(scope: string) {
+  const input = document.querySelector<HTMLInputElement>(`${scope} input`);
+  if (!input) return false;
+  const r = input.getBoundingClientRect();
+  const top = Math.max(0, window.scrollY + r.top + r.height / 2 - window.innerHeight * 0.45);
+  window.scrollTo({ top, behavior: "smooth" });
+  input.focus({ preventScroll: true });
+  return true;
+}
+
 export default function HandleForm({
   tone = "dark",
   centerNote = tone === "light",

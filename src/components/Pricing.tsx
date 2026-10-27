@@ -3,6 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState } from "react";
 import { confetti } from "./confetti";
+import { focusHandleInput } from "./HandleForm";
 import Reveal from "./Reveal";
 import Spoiler from "./Spoiler";
 
@@ -149,10 +150,29 @@ export default function Pricing() {
             <h2 className="section-title mt-5">100% totally free.</h2>
             <p className="section-sub mt-4">We&apos;re not kidding, no credit card required.</p>
           </Spoiler>
-          {/* the button folds away once it's done its job */}
-          <AnimatePresence initial={false}>
-            {!revealed && (
+          {/* the reveal button folds away once it's done its job, and "Get your link" takes its place */}
+          <AnimatePresence initial={false} mode="wait">
+            {revealed ? (
               <motion.div
+                key="claim"
+                className="overflow-hidden"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                transition={{ duration: 0.5, ease: EASE, delay: 0.6 }}
+              >
+                <a
+                  href="#claim"
+                  onClick={(e) => {
+                    if (focusHandleInput("#claim")) e.preventDefault();
+                  }}
+                  className="mt-8 inline-flex h-10 items-center justify-center rounded-[12px] bg-[#7a5cfa] px-4 text-[14.5px] font-medium leading-[21.75px] text-white transition-colors hover:bg-[#6a4ced]"
+                >
+                  Get your link
+                </a>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="reveal"
                 className="overflow-hidden"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}

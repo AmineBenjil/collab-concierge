@@ -129,7 +129,7 @@ export default function Hero() {
             Send them one link. We collect what they want, check who they really are, and hand you a one-line recommendation. You just say yes or no.
           </motion.p>
 
-          <motion.div custom={2} variants={item} initial="hidden" animate={show} className="mt-9 lg:mt-[clamp(24px,4svh,36px)]">
+          <motion.div id="hero-claim" custom={2} variants={item} initial="hidden" animate={show} className="mt-9 lg:mt-[clamp(24px,4svh,36px)]">
             <HandleForm tone={light ? "light" : "dark"} centerNote={false} />
           </motion.div>
 

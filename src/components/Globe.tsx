@@ -1,6 +1,6 @@
 "use client";
 
-import { RiCupLine } from "@remixicon/react";
+import { RiMapPin2Fill } from "@remixicon/react";
 import { useInView } from "motion/react";
 import { useRef } from "react";
 import { GLOBE_DOTS } from "./globe-dots";
@@ -50,7 +50,7 @@ export default function Globe({ className = "" }: { className?: string }) {
       <span className="absolute" style={{ left: CAFE.x, top: CAFE.y }}>
         <span className="globe-pulse absolute -left-[15px] -top-[15px] h-[30px] w-[30px] rounded-full bg-ink" />
         <span className="absolute -left-[15px] -top-[15px] grid h-[30px] w-[30px] place-items-center rounded-full border-2 border-white bg-ink text-white shadow-[0_6px_14px_-4px_rgba(22,26,53,0.5)]">
-          <RiCupLine size={14} />
+          <RiMapPin2Fill size={14} />
         </span>
       </span>
 
