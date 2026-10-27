@@ -1,6 +1,6 @@
 "use client";
 
-import { RiArrowRightUpLine, RiEqualizerLine, RiEyeLine } from "@remixicon/react";
+import { RiArrowRightUpLine, RiEqualizerLine } from "@remixicon/react";
 import { displayName } from "../names";
 import { useToast } from "./Shell";
 import { useHandle } from "./store";
@@ -60,16 +60,10 @@ export default function Share() {
               href={`/c/${encodeURIComponent(handle)}?preview=1`}
               target="_blank"
               rel="noopener"
-              className="group mt-3 flex items-center gap-3.5 rounded-[16px] border-[0.5px] border-[#c6c6c6] bg-white px-4 py-3.5 transition-shadow duration-200 hover:shadow-[0_10px_28px_-18px_rgba(22,26,53,0.3)]"
+              className="group mt-3 inline-flex items-center gap-2 text-[15px] font-semibold leading-5 text-[#3b25c4] transition-colors hover:text-[#2c1aa3]"
             >
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f1f1f4] text-ink-2">
-                <RiEyeLine size={18} aria-hidden="true" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[15.5px] font-medium leading-[22px] text-ink">Test your link</span>
-                <span className="block text-[13px] leading-[18px] text-muted">See exactly what creators see</span>
-              </span>
-              <RiArrowRightUpLine size={18} aria-hidden="true" className="shrink-0 text-muted transition-colors group-hover:text-ink" />
+              Test your link, see what creators see
+              <RiArrowRightUpLine size={16} aria-hidden="true" className="shrink-0 text-[#8b7aec] transition-transform duration-200 group-hover:-translate-y-px group-hover:translate-x-px" />
             </a>
           </div>
 

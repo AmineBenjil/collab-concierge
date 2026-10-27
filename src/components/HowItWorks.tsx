@@ -41,7 +41,7 @@ const STEPS: { title: string; who: string; body: string; Icon: RemixiconComponen
   },
   {
     title: "We vet",
-    who: "Custom criteria",
+    who: "Automated 7-point analysis",
     body: "Seven checks on who's really behind the account.",
     Icon: RiShieldCheckLine,
   },
@@ -258,7 +258,7 @@ const RULES: { title: string; Icon: RemixiconComponentType }[] = [
     Icon: RiCalendarLine,
   },
   {
-    title: "Your criteria",
+    title: "Custom criteria",
     Icon: RiEqualizerLine,
   },
 ];
