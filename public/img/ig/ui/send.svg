@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+  <!-- Instagram's send glyph, traced from an iOS screenshot: a rounded paper-plane triangle
+       whose wing fold is cut out. Sits low in the box, matching the app's optical centring. -->
+  <defs>
+    <mask id="fold" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+      <rect width="24" height="24" fill="#fff" />
+      <path d="M15.5 8.5 L5.5 14.6" stroke="#000" stroke-width="1.5" stroke-linecap="round" />
+    </mask>
+  </defs>
+  <path d="M5 7.2 H19.1 L11.4 19.4 L9.3 12.8 Z" fill="#fff" stroke="#fff" stroke-width="4.4" stroke-linejoin="round" mask="url(#fold)" />
+</svg>

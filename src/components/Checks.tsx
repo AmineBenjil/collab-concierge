@@ -9,10 +9,10 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 const CHECKS = [
   { title: "Fake followers", body: "We look for bought followers and bot-like accounts behind the number.", stat: "2%", caption: "of Mia's followers look suspicious. Well under what we flag." },
   { title: "Real engagement", body: "Likes and comments that come from real people, at a rate that adds up.", stat: "6.4%", caption: "average engagement on her last 12 reels." },
-  { title: "Where their audience is", body: "Where the followers actually live, not where the creator says they are.", stat: "91%", caption: "of her audience lives within 15 km of your café." },
-  { title: "Content quality", body: "Well lit, on brand, consistent. Content you'd be happy to be part of.", stat: "4×", caption: "a week she posts food content in a style that fits yours." },
-  { title: "Red flags", body: "Giveaway farms, engagement pods, deleted collabs, serial freeloaders.", stat: "0", caption: "red flags found across her account history." },
-  { title: "Past collabs", body: "How their previous business collabs actually performed.", stat: "2", caption: "café collabs in the last 6 months, both above her average." },
+  { title: "Audience fit", body: "Age, demographic and location fit with your business.", stat: "91%", caption: "of her audience lives within 15 km of your café." },
+  { title: "Content quality", body: "Well lit, on brand, consistent. Content you'd feel great about.", stat: "4×", caption: "a week she posts food content in a style that fits yours." },
+  { title: "Red flags", body: "Hate speech, scams, trashing other businesses, serial freeloaders.", stat: "0", caption: "red flags found across her account history." },
+  { title: "Past collabs", body: "How their previous collabs actually performed.", stat: "2", caption: "café collabs in the last 6 months, both above her average." },
   { title: "Audience size", body: "Big enough to matter, not too big to afford a gifted visit.", stat: "24.1K", caption: "followers. Right-sized for a gifted visit for two." },
 ];
 
@@ -24,10 +24,23 @@ function Item({ i, active, onActive }: { i: number; active: boolean; onActive: (
   }, [inView, i, onActive]);
   const c = CHECKS[i];
   return (
-    <div ref={ref} className="relative py-7 pl-6 lg:py-12">
-      <span className={`absolute left-0 top-7 bottom-7 w-[2px] rounded-full transition-all duration-500 lg:top-12 lg:bottom-12 ${active ? "opacity-100" : "opacity-0"}`} style={{ background: "var(--grad)" }} />
+    // clicking a check scrolls it to the middle of the screen, where the in-view watcher makes it active
+    <div
+      ref={ref}
+      role="button"
+      tabIndex={0}
+      aria-current={active || undefined}
+      onClick={() => ref.current?.scrollIntoView({ behavior: "smooth", block: "center" })}
+      onKeyDown={(e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        ref.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }}
+      className={`relative block w-full cursor-pointer rounded-[4px] py-7 pl-6 text-left lg:py-12 ${active ? "" : "hover:[&>div]:opacity-60"}`}
+    >
+      <span className={`absolute left-0 top-7 bottom-7 w-[2px] rounded-full bg-[#1c1c1c] transition-all duration-500 lg:top-12 lg:bottom-12 ${active ? "opacity-100" : "opacity-0"}`} />
       <div className={`transition-opacity duration-500 ${active ? "opacity-100" : "opacity-35"}`}>
-        <div className="text-[13px] font-semibold text-violet">Check {i + 1} of 7</div>
+        <div className={`text-[13px] font-semibold transition-colors duration-500 ${active ? "text-violet" : "text-[#8a8a96]"}`}>Check {i + 1} of 7</div>
         <h3 className="mt-1.5 text-[26px] sm:text-[30px]">{c.title}</h3>
         <p className="mt-2 max-w-[420px] text-[16px] leading-relaxed text-ink-2">{c.body}</p>
       </div>
@@ -46,10 +59,10 @@ export default function Checks() {
           label="What we check"
           title={
             <>
-              Seven checks before <span className="grad-text">you say yes</span>
+              7 checks before <span className="grad-text">you say yes</span>
             </>
           }
-          sub="Run the moment a creator applies. You skip the raw data and get the answer."
+          sub="We run them as soon as a creator applies. You get a clear answer, not a pile of stats."
         />
 
         <div className="mt-12 grid gap-10 lg:mt-20 lg:grid-cols-[1fr_1fr] lg:gap-16">

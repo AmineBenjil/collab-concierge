@@ -1,7 +1,7 @@
 "use client";
 
-import { RiArrowDownSLine, RiArrowUpFill, RiCameraLine, RiDeleteBack2Line, RiEditBoxLine, RiEmotionHappyLine, RiLineChartLine, RiMicLine, RiSearchLine, RiSendPlaneLine } from "@remixicon/react";
-import { AnimatePresence, motion } from "motion/react";
+import { RiArrowUpFill, RiDeleteBack2Line, RiEmotionHappyLine, RiMicLine, RiSearchLine } from "@remixicon/react";
+import { AnimatePresence, animate, motion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useIntro } from "./IntroContext";
 import { BrandIcon } from "./Logo";
@@ -13,18 +13,18 @@ import { usePhoneBrand } from "./handle";
   then scaled to the frame's screen cutout. 375 x 815 matches the 16 Pro screen
   shape to within half a percent.
 
-  Story: new DM arrives -> open thread -> tap composer (keyboard up) -> long-press
-  -> Paste -> send -> Mia replies -> keyboard down -> swipe back to inbox ->
-  another DM arrives -> Benable notification: Mia is checked, see her in your dashboard.
+  Story: empty thread with Mia -> she types her collab ask -> tap composer
+  (keyboard up) -> long-press -> Paste -> send -> Mia replies -> keyboard down ->
+  Collab Concierge notification -> back to the empty thread.
 */
 export const SCREEN = { left: 7.255, top: 3.579, width: 85.775, height: 92.842 };
 export const PT_W = 375;
 export const PT_H = 815;
 export const FRAME_RATIO = 1411 / 703;
-const IOS_EASE = [0.32, 0.72, 0, 1] as const;
+export const IOS_EASE = [0.32, 0.72, 0, 1] as const;
 const KB_EASE = [0.25, 0.9, 0.3, 1] as const;
 const SOFT = { type: "spring", stiffness: 240, damping: 32, mass: 0.9 } as const;
-const UI = "/img/ig/ui";
+export const UI = "/img/ig/ui";
 
 const KB_H = 336; // predictive bar + keys + bottom bar, iPhone Face ID layout
 const REST_BOTTOM = 36; // composer pill bottom gap with no keyboard (Figma)
@@ -33,7 +33,7 @@ const PILL_MIN = 42;
 const PILL_MAX = 100;
 
 // Figma tokens
-const C = {
+export const C = {
   ink: "#0f1014",
   bubbleText: "#0f1316",
   grey: "#6b7074",
@@ -49,25 +49,17 @@ type Msg = { id: string; from: "them" | "me"; text: string; link?: boolean };
 type Touch = { x: number; y: number; hold?: boolean } | null;
 
 type State = {
-  scene: "inbox" | "thread";
-  back: boolean;
-  newRow: boolean;
-  pressed: boolean;
   kb: boolean;
   menu: boolean;
   typed: boolean;
   msgs: Msg[];
   seen: boolean;
   typing: boolean;
-  miaAnswered: boolean;
-  nextDm: boolean;
   banner: boolean;
   touch: Touch;
 };
 
-const OPENING: Msg[] = [
-  { id: "a", from: "them", text: "hiii!! obsessed with your place 😍 i'm a Lisbon food creator (24.1K) and would LOVE to collab. gifted visit for a reel + 3 stories? 💜" },
-];
+const OPENING_MSG: Msg = { id: "a", from: "them", text: "hiii!! obsessed with your place 😍 i'm a Lisbon food creator (24.1K) and would LOVE to collab. gifted visit for a reel + 3 stories? 💜" };
 const REPLY_TEXT = "Thanks for reaching out! We handle collab requests here, takes a couple minutes and we'll get back to you";
 const reply = (handle: string) => `${REPLY_TEXT} benable.com/c/${handle}`;
 const REPLY_MSG: Msg = { id: "c", from: "me", text: REPLY_TEXT, link: true };
@@ -75,62 +67,48 @@ const THANKS = "done!! that was so easy ✨";
 const THANKS_MSG: Msg = { id: "d", from: "them", text: THANKS };
 
 const INITIAL: State = {
-  scene: "inbox",
-  back: false,
-  newRow: false,
-  pressed: false,
   kb: false,
   menu: false,
   typed: false,
-  msgs: OPENING,
+  msgs: [],
   seen: false,
   typing: false,
-  miaAnswered: false,
-  nextDm: false,
   banner: false,
   touch: null,
 };
 
-const FINAL: State = { ...INITIAL, scene: "inbox", back: true, newRow: true, miaAnswered: true, nextDm: true, banner: true, msgs: [...OPENING, REPLY_MSG, THANKS_MSG] };
+const FINAL: State = { ...INITIAL, banner: true, msgs: [OPENING_MSG, REPLY_MSG, THANKS_MSG] };
 
 // tap targets, in 375-pt canvas coordinates
 const T = {
-  miaRow: { x: 190, y: 340 },
   composer: { x: 140, y: 758 },
   composerUp: { x: 140, y: PT_H - KB_BOTTOM - 21 },
   paste: { x: 116, y: PT_H - KB_BOTTOM - PILL_MIN - 30 },
-  send: { x: 346, y: PT_H - KB_BOTTOM - 21 },
+  send: { x: 338, y: PT_H - KB_BOTTOM - 21 },
 };
 
 const TIMELINE: { at: number; set: (s: State) => State }[] = [
-  { at: 900, set: (s) => ({ ...s, newRow: true }) },
-  { at: 2300, set: (s) => ({ ...s, touch: T.miaRow, pressed: true }) },
-  { at: 2650, set: (s) => ({ ...s, touch: null, pressed: false, scene: "thread" }) },
-  { at: 3700, set: (s) => ({ ...s, touch: T.composer }) },
-  { at: 3900, set: (s) => ({ ...s, touch: null, kb: true }) },
-  { at: 4800, set: (s) => ({ ...s, touch: { ...T.composerUp, hold: true } }) },
-  { at: 5400, set: (s) => ({ ...s, touch: null, menu: true }) },
-  { at: 6100, set: (s) => ({ ...s, touch: T.paste }) },
-  { at: 6300, set: (s) => ({ ...s, touch: null, menu: false, typed: true }) },
-  { at: 7500, set: (s) => ({ ...s, touch: { ...T.send, y: PT_H - KB_BOTTOM - 19 } }) },
-  { at: 7700, set: (s) => ({ ...s, touch: null, typed: false, msgs: [...s.msgs, REPLY_MSG] }) },
-  { at: 8800, set: (s) => ({ ...s, seen: true }) },
-  { at: 9500, set: (s) => ({ ...s, typing: true }) },
-  { at: 11000, set: (s) => ({ ...s, typing: false, seen: false, msgs: [...s.msgs, THANKS_MSG] }) },
-  { at: 12300, set: (s) => ({ ...s, kb: false }) },
-  { at: 12800, set: (s) => ({ ...s, scene: "inbox", back: true, miaAnswered: true }) },
-  { at: 14200, set: (s) => ({ ...s, nextDm: true }) },
-  { at: 15600, set: (s) => ({ ...s, banner: true }) },
-  { at: 20600, set: (s) => ({ ...s, banner: false }) },
+  { at: 900, set: (s) => ({ ...s, typing: true }) },
+  { at: 2600, set: (s) => ({ ...s, typing: false, msgs: [OPENING_MSG] }) },
+  { at: 3900, set: (s) => ({ ...s, touch: T.composer }) },
+  { at: 4100, set: (s) => ({ ...s, touch: null, kb: true }) },
+  { at: 5000, set: (s) => ({ ...s, touch: { ...T.composerUp, hold: true } }) },
+  { at: 5600, set: (s) => ({ ...s, touch: null, menu: true }) },
+  { at: 6300, set: (s) => ({ ...s, touch: T.paste }) },
+  { at: 6500, set: (s) => ({ ...s, touch: null, menu: false, typed: true }) },
+  { at: 7700, set: (s) => ({ ...s, touch: { ...T.send, y: PT_H - KB_BOTTOM - 19 } }) },
+  { at: 7900, set: (s) => ({ ...s, touch: null, typed: false, msgs: [...s.msgs, REPLY_MSG] }) },
+  { at: 9000, set: (s) => ({ ...s, seen: true }) },
+  { at: 9700, set: (s) => ({ ...s, typing: true }) },
+  { at: 11200, set: (s) => ({ ...s, typing: false, seen: false, msgs: [...s.msgs, THANKS_MSG] }) },
+  { at: 12500, set: (s) => ({ ...s, kb: false }) },
+  { at: 14000, set: (s) => ({ ...s, banner: true }) },
+  { at: 19000, set: (s) => ({ ...s, banner: false }) },
 ];
-const LOOP = 21600;
+const LOOP = 20000;
 
-type Exit = { scene: State["scene"]; back: boolean };
-
-export default function Phone({ className = "", onPhase }: { className?: string; onPhase?: (phase: number) => void }) {
-  const { done, reduced } = useIntro();
-  const [state, setState] = useState<State>(INITIAL);
-  const [run, setRun] = useState(0);
+/* the device: frame PNG over a 375 x 815 canvas scaled to its screen cutout */
+export function PhoneFrame({ className = "", label, children }: { className?: string; label: string; children: React.ReactNode }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState<number | null>(null);
 
@@ -143,6 +121,40 @@ export default function Phone({ className = "", onPhase }: { className?: string;
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  const s = scale ?? 0.8;
+  const screenBox = {
+    left: `${SCREEN.left}%`,
+    top: `${SCREEN.top}%`,
+    width: `${SCREEN.width}%`,
+    height: `${SCREEN.height}%`,
+    borderRadius: 51 * s,
+  };
+  return (
+    <div ref={wrap} className={`relative select-none ${className}`} style={{ aspectRatio: `1 / ${FRAME_RATIO}` }} role="img" aria-label={label}>
+      {/* soft static shadow (a filter on the frame would repaint every frame) */}
+      <div className="pointer-events-none absolute inset-x-[10%] bottom-[2%] top-[6%] rounded-[60px] bg-[rgba(50,25,140,0.35)] blur-[40px]" />
+      <div className="absolute bg-black" style={screenBox} />
+      <div className="absolute overflow-hidden bg-white" style={{ ...screenBox, isolation: "isolate" }}>
+        <div
+          className="ios absolute left-0 top-0 origin-top-left overflow-hidden"
+          style={{ width: PT_W, height: PT_H, transform: `scale(${s})`, opacity: scale === null ? 0 : 1 }}
+        >
+          {children}
+          <div className="absolute bottom-[8px] left-1/2 z-40 h-[5px] w-[134px] -translate-x-1/2 rounded-full bg-black" />
+        </div>
+      </div>
+
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/img/iphone-16-pro.png" alt="" draggable={false} className="pointer-events-none absolute inset-0 h-full w-full" />
+    </div>
+  );
+}
+
+export default function Phone({ className = "" }: { className?: string }) {
+  const { done, reduced } = useIntro();
+  const [state, setState] = useState<State>(INITIAL);
+  const [run, setRun] = useState(0);
 
   useEffect(() => {
     if (!done || reduced) return;
@@ -157,72 +169,22 @@ export default function Phone({ className = "", onPhase }: { className?: string;
   }, [done, reduced, run]);
 
   const view = reduced ? FINAL : state;
-  const phase = view.banner ? 4 : view.miaAnswered || view.seen || view.typing || view.msgs.length > 2 ? 3 : view.scene === "thread" ? 2 : 1;
-  useEffect(() => {
-    onPhase?.(phase);
-  }, [phase, onPhase]);
-  const s = scale ?? 0.8;
-  const screenBox = {
-    left: `${SCREEN.left}%`,
-    top: `${SCREEN.top}%`,
-    width: `${SCREEN.width}%`,
-    height: `${SCREEN.height}%`,
-    borderRadius: 51 * s,
-  };
-  const exitInfo: Exit = { scene: view.scene, back: view.back };
-
   return (
-    <div
-      ref={wrap}
-      className={`relative select-none ${className}`}
-      style={{ aspectRatio: `1 / ${FRAME_RATIO}` }}
-      role="img"
-      aria-label="Found Coffee's Instagram inbox. A creator named Mia asks for a collab, the café pastes its Benable link, Mia fills it in, a new DM arrives, and and Collab Concierge reports 18 collab requests reviewed and fully vetted."
+    <PhoneFrame
+      className={className}
+      label="Found Coffee's Instagram DMs. A creator named Mia asks for a collab, the café pastes its Benable link, Mia fills it in, and Collab Concierge reports 18 collab requests reviewed and fully vetted."
     >
-      {/* soft static shadow (a filter on the frame would repaint every frame) */}
-      <div className="pointer-events-none absolute inset-x-[10%] bottom-[2%] top-[6%] rounded-[60px] bg-[rgba(50,25,140,0.35)] blur-[40px]" />
-      <div className="absolute bg-black" style={screenBox} />
-      <div className="absolute overflow-hidden bg-white" style={{ ...screenBox, isolation: "isolate" }}>
-        <div
-          className="ios absolute left-0 top-0 origin-top-left overflow-hidden"
-          style={{ width: PT_W, height: PT_H, transform: `scale(${s})`, opacity: scale === null ? 0 : 1 }}
-        >
-          <AnimatePresence initial={false} custom={exitInfo}>
-            {view.scene === "inbox" ? (
-              <motion.div
-                key={`inbox-${run}`}
-                custom={exitInfo}
-                variants={{
-                  // forward push to the thread: slide left with iOS parallax; loop reset: fade
-                  exit: (c: Exit) =>
-                    c.scene === "thread"
-                      ? { x: -110, transition: { duration: 0.5, ease: IOS_EASE } }
-                      : { opacity: 0, transition: { duration: 0.45 } },
-                }}
-                initial={view.back ? { x: -110 } : { opacity: 0 }}
-                animate={{ x: 0, opacity: 1, transition: { duration: view.back ? 0.5 : 0.45, ease: IOS_EASE } }}
-                exit="exit"
-                className="absolute inset-0 bg-white"
-              >
-                <Inbox view={view} />
-              </motion.div>
-            ) : (
-              <motion.div
-                key={`thread-${run}`}
-                custom={exitInfo}
-                variants={{
-                  // pop back: slide off to the right, like iOS
-                  exit: (c: Exit) =>
-                    c.back ? { x: PT_W, transition: { duration: 0.5, ease: IOS_EASE } } : { opacity: 0, transition: { duration: 0.45 } },
-                }}
-                initial={{ x: PT_W }}
-                animate={{ x: 0, transition: { duration: 0.5, ease: IOS_EASE } }}
-                exit="exit"
-                className="absolute inset-0 z-10 bg-white shadow-[-10px_0_24px_rgba(0,0,0,0.1)]"
-              >
-                <Thread state={view} />
-              </motion.div>
-            )}
+          {/* loop reset: the finished thread fades out over a fresh, empty one */}
+          <AnimatePresence initial={false}>
+            <motion.div
+              key={`thread-${run}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, transition: { duration: 0.45, ease: IOS_EASE } }}
+              exit={{ opacity: 0, transition: { duration: 0.45 } }}
+              className="absolute inset-0 bg-white"
+            >
+              <Thread state={view} />
+            </motion.div>
           </AnimatePresence>
 
           <StatusBar />
@@ -243,14 +205,7 @@ export default function Phone({ className = "", onPhase }: { className?: string;
           </AnimatePresence>
 
           <TouchDot touch={view.touch} />
-
-          <div className="absolute bottom-[8px] left-1/2 z-40 h-[5px] w-[134px] -translate-x-1/2 rounded-full bg-black" />
-        </div>
-      </div>
-
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/img/iphone-16-pro.png" alt="" draggable={false} className="pointer-events-none absolute inset-0 h-full w-full" />
-    </div>
+    </PhoneFrame>
   );
 }
 
@@ -376,130 +331,26 @@ function Keyboard() {
   );
 }
 
-/* ---------- Instagram inbox, filled to the bottom ---------- */
-
-const ROWS = [
-  { img: "ana", name: "Ana Ribeiro", preview: "Do you have oat milk?", time: "1h" },
-  { img: "nata", name: "Nata Lab", preview: "Sent an attachment", time: "3h" },
-  { img: "joao", name: "João Pereira", preview: "Loved the cortado 😍", time: "5h" },
-  { img: "ines", name: "Inês Martins", preview: "Are you open on Sunday?", time: "8h" },
-  { img: "roasters", name: "Lisbon Roasters", preview: "Invoice for October is ready", time: "1d" },
-  { img: "tiago", name: "Tiago Alves", preview: "Can I book the back room for 12?", time: "1d" },
-  { img: "rafa", name: "Rafa Costa", preview: "Reacted ❤️ to your message", time: "2d" },
-  { img: "beatriz", name: "Beatriz Lopes", preview: "Thank you for the croissants!", time: "2d" },
-  { img: "cafe", name: "Barista Guild PT", preview: "Latte art night is on 🎉", time: "3d" },
-  { img: "ana", name: "Marta Sousa", preview: "Do you sell your beans?", time: "4d" },
-  { img: "joao", name: "Pedro Nunes", preview: "Seen", time: "5d" },
-];
-
-function Inbox({ view }: { view: State }) {
-  const brand = usePhoneBrand();
-  return (
-    <div className="absolute inset-0 overflow-hidden pt-[54px]" style={{ color: C.ink }}>
-      <div className="relative flex h-[45px] items-center px-5">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`${UI}/back.svg`} alt="" width={24} height={24} />
-        <span className="ml-3 max-w-[200px] truncate text-[20px] font-bold tracking-[-0.4px]">{brand.handle}</span>
-        <RiArrowDownSLine size={18} color={C.ink} aria-hidden="true" className="ml-0.5" />
-        <span className="ml-auto flex items-center gap-4">
-          <RiLineChartLine size={24} color={C.ink} aria-hidden="true" />
-          <RiEditBoxLine size={24} color={C.ink} aria-hidden="true" />
-        </span>
-      </div>
-
-      <div className="mx-4 mt-1 flex h-[36px] items-center gap-2 rounded-[10px] px-3 text-[15px]" style={{ background: C.incoming, color: C.grey }}>
-        <span className="h-[18px] w-[18px] rounded-full bg-[conic-gradient(from_200deg,#3c7bff,#a33cf2,#ff4f8b,#3c7bff)] p-[3px]">
-          <span className="block h-full w-full rounded-full" style={{ background: C.incoming }} />
-        </span>
-        Ask Meta AI or Search
-      </div>
-
-      <div className="mt-3 flex gap-3 px-4">
-        <Note img="foundcoffee" label="Your note" note="new oat flat white ☕" own />
-        <Note img="ana" label="Ana" note="🎧 Fado night" />
-        <Note img="nata" label="Nata Lab" note="fresh batch 6pm" />
-        <Note img="joao" label="João" />
-      </div>
-
-      <div className="mt-3 flex items-center justify-between px-4">
-        <span className="text-[16px] font-bold">Messages</span>
-        <span className="text-[14px] font-semibold text-[#0095f6]">Requests (3)</span>
-      </div>
-
-      <div className="mt-1">
-        <Arriving show={view.nextDm}>
-          <Row img="clara" name="Clara Mendes" preview="Hi! I'd love to feature your pastries 🥐" time="now" unread />
-        </Arriving>
-        <Arriving show={view.newRow}>
-          {view.miaAnswered ? (
-            <Row img="mia" name="Mia Duarte" preview={THANKS} time="now" />
-          ) : (
-            <Row img="mia" name="Mia Duarte" preview="hiii!! obsessed with your place 😍…" time="now" unread pressed={view.pressed} />
-          )}
-        </Arriving>
-        {ROWS.map((r) => (
-          <Row key={r.name} {...r} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Arriving({ show, children }: { show: boolean; children: React.ReactNode }) {
-  return (
-    <motion.div
-      initial={false}
-      animate={{ height: show ? 70 : 0, opacity: show ? 1 : 0 }}
-      transition={{ duration: 0.55, ease: IOS_EASE }}
-      className="overflow-hidden"
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-function Note({ img, label, note, own }: { img: string; label: string; note?: string; own?: boolean }) {
-  return (
-    <div className="relative flex w-[78px] flex-col items-center pt-[28px]">
-      {note && (
-        <div className="absolute left-1/2 top-0 z-10 max-w-[90px] -translate-x-1/2 rounded-[14px] bg-white px-2.5 py-1.5 text-center text-[11px] leading-[1.2] shadow-[0_1px_6px_rgba(0,0,0,0.14)]">
-          <span className="line-clamp-2">{note}</span>
-        </div>
-      )}
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={`/img/ig/${img}.jpg`} alt="" className="h-[68px] w-[68px] rounded-full object-cover" />
-      {own && (
-        <span className="absolute bottom-[18px] right-[5px] grid h-5 w-5 place-items-center rounded-full border-2 border-white bg-[#0095f6] text-[14px] font-bold leading-none text-white">+</span>
-      )}
-      <span className="mt-1.5 max-w-full truncate text-[12px]" style={{ color: C.grey }}>{label}</span>
-    </div>
-  );
-}
-
-function Row({ img, name, preview, time, unread, pressed }: { img: string; name: string; preview: string; time: string; unread?: boolean; pressed?: boolean }) {
-  return (
-    <div className="flex h-[70px] items-center gap-3 px-4 transition-colors duration-200" style={{ background: pressed ? C.incoming : "transparent" }}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={`/img/ig/${img}.jpg`} alt="" className="h-[54px] w-[54px] shrink-0 rounded-full object-cover" />
-      <div className="min-w-0 flex-1 leading-[1.3]">
-        <div className={`truncate text-[14px] ${unread ? "font-bold" : ""}`}>{name}</div>
-        <div className={`truncate text-[14px] tracking-[-0.14px] ${unread ? "font-semibold" : ""}`} style={{ color: unread ? C.ink : C.grey }}>
-          {preview} <span className="font-normal" style={{ color: C.grey }}>· {time}</span>
-        </div>
-      </div>
-      {unread ? (
-        <span className="h-2 w-2 shrink-0 rounded-full bg-[#0095f6]" />
-      ) : (
-        <RiCameraLine size={24} color={C.grey} aria-hidden="true" />
-      )}
-    </div>
-  );
-}
-
 /* ---------- Instagram thread (Figma: IG UI 519:4568 + 516:2440) ---------- */
 
 function Thread({ state }: { state: State }) {
   const msgs = state.msgs;
+  const stack = useRef<HTMLDivElement>(null);
+  const stackH = useRef<number | null>(null);
+
+  // The stack is pinned to the composer, so new content grows it upward. Start it
+  // shifted down by the growth and slide the whole thing up as one block: the new
+  // bubble rises from behind the composer and pushes the older ones with it.
+  // offsetHeight ignores the phone's scale transform, so this stays in canvas points.
+  useLayoutEffect(() => {
+    const el = stack.current;
+    if (!el) return;
+    const h = el.offsetHeight;
+    const grew = stackH.current === null ? 0 : h - stackH.current;
+    stackH.current = h;
+    if (grew !== 0) animate(el, { y: [grew, 0] }, { duration: 0.55, ease: IOS_EASE });
+  }, [msgs.length, state.typing]);
+
   return (
     <div className="absolute inset-0" style={{ color: C.ink }}>
       {/* white behind the status bar, so content that scrolls up stays hidden */}
@@ -535,9 +386,9 @@ function Thread({ state }: { state: State }) {
         transition={{ duration: 0.42, ease: KB_EASE }}
       >
         <div className="relative min-h-0 flex-1 overflow-hidden">
-          <div className="absolute inset-x-0 bottom-0 flex flex-col pb-[10px]">
+          <div ref={stack} className="absolute inset-x-0 bottom-0 flex flex-col pb-[10px]">
             {/* profile card: Figma 516:2478 */}
-            <motion.div layout="position" transition={SOFT} className="mx-auto flex w-[265px] flex-col items-center gap-[8px] pb-[28px] pt-[35px]">
+            <div className="mx-auto flex w-[265px] flex-col items-center gap-[8px] pb-[28px] pt-[35px]">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/img/ig/mia.jpg" alt="" className="h-[80px] w-[80px] rounded-full object-cover" />
               <div className="flex w-full flex-col items-center gap-[16px]">
@@ -553,11 +404,20 @@ function Thread({ state }: { state: State }) {
                   View profile
                 </span>
               </div>
-            </motion.div>
+            </div>
 
-            <motion.p layout="position" transition={SOFT} className="pb-[16px] text-center text-[10px] uppercase" style={{ color: C.stamp }}>
-              Today at 9:38
-            </motion.p>
+            {/* the empty thread starts as just the profile card */}
+            {(msgs.length > 0 || state.typing) && (
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={SOFT}
+                className="pb-[16px] text-center text-[10px] uppercase"
+                style={{ color: C.stamp }}
+              >
+                Today at 9:38
+              </motion.p>
+            )}
 
             <AnimatePresence initial={false}>
               {msgs.map((m, i) => {
@@ -569,10 +429,9 @@ function Thread({ state }: { state: State }) {
             </AnimatePresence>
             {state.typing && (
               <motion.div
-                layout="position"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={SOFT}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
                 className="ml-[15px] mt-[10px] flex items-end gap-[10px]"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -655,7 +514,7 @@ function Composer({ state }: { state: State }) {
         </div>
 
         {/* text */}
-        <div className="absolute bottom-[12px] left-[48px] right-[52px] text-[14px] leading-[18px] tracking-[0.21px]">
+        <div className="absolute bottom-[12px] left-[48px] right-[58px] text-[14px] leading-[18px] tracking-[0.21px]">
           {typed ? (
             <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="line-clamp-4 block" style={{ color: C.ink }}>
               {reply(brand.handle)}
@@ -681,10 +540,12 @@ function Composer({ state }: { state: State }) {
           <img src={`${UI}/plus.svg`} alt="" width={24} height={24} className="absolute left-[114px] top-0" />
         </div>
         <span
-          className={`absolute bottom-[4px] right-[4px] grid h-[34px] w-[44px] place-items-center rounded-full transition-[opacity,transform] duration-200 ${typed ? "scale-100 opacity-100" : "scale-75 opacity-0"}`}
+          className={`absolute bottom-[4px] right-[4px] grid h-[34px] w-[50px] place-items-center rounded-full transition-[opacity,transform] duration-200 ${typed ? "scale-100 opacity-100" : "scale-75 opacity-0"}`}
           style={{ background: C.outgoing }}
         >
-          <RiSendPlaneLine size={18} color="#fff" aria-hidden="true" />
+          {/* Instagram's send glyph has no Remix equivalent, so it is traced from the app */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`${UI}/send.svg`} alt="" width={24} height={24} />
         </span>
       </motion.div>
     </div>
@@ -698,10 +559,10 @@ function Bubble({ m, showAvatar, gapTop, seen }: { m: Msg; showAvatar: boolean; 
 
   return (
     <motion.div
-      layout="position"
-      initial={{ opacity: 0, y: me ? 36 : 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={SOFT}
+      // the stack slide in Thread moves it into place; ours rises from behind the composer at full opacity
+      initial={{ opacity: me ? 1 : 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
       className={`flex flex-col ${me ? "items-end pr-[8px]" : "items-start pl-[15px]"}`}
       style={{ marginTop: gapTop }}
     >

@@ -10,6 +10,7 @@ const LINKS = [
   { href: "#how", label: "How it works" },
   { href: "#checks", label: "What we check" },
   { href: "#creators", label: "Creators" },
+  { href: "#pricing", label: "Pricing" },
   { href: "#faq", label: "FAQ" },
 ];
 
@@ -27,31 +28,33 @@ export default function Nav() {
       initial={{ opacity: 0, y: -16 }}
       animate={done ? { opacity: 1, y: 0 } : { opacity: 0, y: -16 }}
       transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-      className="fixed inset-x-0 top-3 z-50 flex justify-center px-2 sm:top-4"
+      className="fixed inset-x-0 top-0 z-50 flex justify-center sm:top-4 sm:px-2"
     >
       <nav
         aria-label="Main"
-        className={`flex h-[58px] w-full items-center justify-between rounded-[18px] border pl-4 pr-2 transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)] ${
+        // phones: an edge-to-edge bar pinned to the top (bottom hairline only); wider screens: the floating pill.
+        // Scrolled, the pill narrows a little (1120 -> 1000) so the links keep their breathing room.
+        className={`flex h-[58px] w-full items-center justify-between gap-6 rounded-[18px] border pl-4 pr-2 transition-all duration-500 ease-[cubic-bezier(.22,1,.36,1)] max-sm:h-14 max-sm:max-w-none max-sm:rounded-none max-sm:border-x-0 max-sm:border-t-0 max-sm:pr-3 ${
           scrolled
-            ? "max-w-[860px] border-[#e5e7eb]/70 bg-white/70 text-ink shadow-[0_20px_32px_-12px_rgba(50,38,98,0.22)] backdrop-blur-xl"
+            ? "max-w-[1000px] border-[#e5e7eb]/70 bg-white/70 text-ink shadow-[0_20px_32px_-12px_rgba(50,38,98,0.22)] backdrop-blur-xl max-sm:bg-white/85 max-sm:shadow-[0_8px_20px_-14px_rgba(50,38,98,0.25)]"
             : dark
               ? "max-w-[1120px] border-ink/10 bg-white/50 text-ink backdrop-blur-md"
               : "max-w-[1120px] border-white/12 bg-white/[0.06] text-white backdrop-blur-md"
         }`}
       >
-        <a href="#" className="flex items-center gap-3" aria-label="Benable Collab Concierge home">
+        <a href="#" className="flex shrink-0 items-center gap-3" aria-label="Benable Collab Concierge home">
           <Logo className={dark ? "text-ink" : "text-white"} />
           <span className={`hidden h-4 w-px sm:block ${dark ? "bg-ink/15" : "bg-white/25"}`} />
           <span className="hidden text-[14px] font-semibold sm:block">Collab Concierge</span>
         </a>
-        <div className="hidden items-center gap-7 text-[14px] font-medium md:flex">
+        <div className="hidden items-center gap-8 text-[14px] font-medium lg:flex">
           {LINKS.map((l) => (
             <a key={l.href} href={l.href} className={`transition-opacity hover:opacity-100 ${scrolled ? "opacity-70" : "opacity-75"}`}>
               {l.label}
             </a>
           ))}
         </div>
-        <a href="#claim" className={`btn !rounded-[12px] !py-[9px] !pl-4 !pr-4 text-[14px] ${dark ? "btn-dark" : "btn-light"}`}>
+        <a href="#claim" className={`btn shrink-0 !rounded-[12px] !py-[9px] !pl-4 !pr-4 text-[14px] ${dark ? "btn-dark" : "btn-light"}`}>
           Get your link
         </a>
       </nav>
