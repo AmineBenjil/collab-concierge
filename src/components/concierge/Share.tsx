@@ -1,26 +1,25 @@
 "use client";
 
 import { RiArrowRightUpLine, RiEqualizerLine } from "@remixicon/react";
+import Link from "next/link";
 import { displayName } from "../names";
-import { useToast } from "./Shell";
 import { useHandle } from "./store";
 import { CopyButton, Rise } from "./ui";
 
-/* the dashboard's request card: hairline border, no resting shadow */
+/* the Requests page's request card: hairline border, no resting shadow */
 const BOX = "rounded-[18px] border border-[#ececf1] bg-white";
 
 /* The Concierge is live: the link, a way to try it as a creator, and the reply to paste into DMs. */
 export default function Share() {
   const handle = useHandle();
   const name = displayName(handle);
-  const say = useToast();
   const link = `benable.com/c/${handle}`;
   const reply = `Thanks for reaching out! We handle collab requests here: ${link}. Takes a couple minutes and we'll get back to you.`;
 
   return (
     <main className="relative mx-auto w-full max-w-[600px] px-5 pb-24 pt-[112px] sm:pt-[140px]">
       <Rise i={0}>
-        {/* the same title, spacing and alignment as the Dashboard tab */}
+        {/* the same title, spacing and alignment as the Requests page */}
         <h1 className="dash-title">
           Your Collab Concierge is <span className="grad-text">live.</span>
         </h1>
@@ -44,7 +43,7 @@ export default function Share() {
             </div>
             <a href={`https://instagram.com/${encodeURIComponent(handle)}`} target="_blank" rel="noopener" aria-label={`Open ${name} on Instagram`} className="shrink-0 transition-opacity hover:opacity-80">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/img/share/instagram.svg" alt="" width={24} height={24} />
+              <img src="/img/instagram.svg" alt="" width={24} height={24} />
             </a>
           </div>
 
@@ -96,9 +95,9 @@ export default function Share() {
             <div className="text-[15.5px] font-medium text-ink">Make it yours</div>
             <div className="text-[13px] text-muted">The questions creators answer, your dealbreakers, the collabs you want.</div>
           </div>
-          <button type="button" onClick={() => say("Customize is next on the build list.")} className="shrink-0 rounded-full bg-[#111] px-4 py-2 text-[14px] font-semibold text-white transition-colors hover:bg-black">
+          <Link href={`/customize?handle=${encodeURIComponent(handle)}`} className="shrink-0 rounded-full bg-[#111] px-4 py-2 text-[14px] font-semibold text-white transition-colors hover:bg-black">
             Customize
-          </button>
+          </Link>
         </div>
       </Rise>
     </main>

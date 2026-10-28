@@ -6,7 +6,7 @@ import { CREATORS, declineMessage, type Status } from "./data";
 
 /*
   Client-only state for the business side of the demo. It lives at module level so it
-  survives switching between Share and Dashboard (client navigation), and resets on reload.
+  survives switching between Share and Requests (client navigation), and resets on reload.
 */
 
 const noop = () => () => {};

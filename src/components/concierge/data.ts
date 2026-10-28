@@ -1,5 +1,5 @@
 /*
-  The demo dashboard's creators: everyone who used the business's Concierge link,
+  The demo Requests page's creators: everyone who used the business's Concierge link,
   with Benable's review of each. Copy is Tony's, word for word, from his prototype.
   Photos are Benable's own creator shots (see public/img/dash).
 */
@@ -38,7 +38,7 @@ export type Creator = {
 };
 
 /* fit reads like a health meter: three segments, filled by how good the fit is */
-/* tag: the dashboard row's fit label (strong is from the Figma row; maybe and no follow the same tint, stroke, deep-text recipe) */
+/* tag: the Requests row's fit label (strong is from the Figma row; maybe and no follow the same tint, stroke, deep-text recipe) */
 export const FIT: Record<Fit, { label: string; chip: string; tag: string; text: string; dot: string; bar: string; filled: number }> = {
   strong: { label: "Strong fit", chip: "bg-mint/12 text-[#178a60]", tag: "border-[#c7e1c6] bg-[#e3f9e2] text-[#175412]", text: "text-[#178a60]", dot: "bg-mint", bar: "bg-mint", filled: 3 },
   maybe: { label: "Maybe", chip: "bg-[#fdf3e1] text-[#a8630a]", tag: "border-[#ecd6a9] bg-[#fdf3e1] text-[#7a4806]", text: "text-[#a8630a]", dot: "bg-[#f0a531]", bar: "bg-[#f0a531]", filled: 2 },

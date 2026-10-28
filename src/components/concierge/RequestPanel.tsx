@@ -3,9 +3,10 @@
 import { RiArrowGoBackLine, RiArrowRightLine, RiCheckLine } from "@remixicon/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode, type RefObject } from "react";
-import { forwardMessage, longDate, shortDate, type Check, type Creator, type Fit, type Social, type Status } from "./data";
+import { forwardMessage, longDate, type Check, type Creator, type Fit, type Social, type Status } from "./data";
 import { useToast } from "./Shell";
 import { getDeclineMessage, saveDeclineMessage } from "./store";
+import { BrandIcon } from "../Logo";
 import { copyText, EASE } from "./ui";
 
 type Props = {
@@ -20,10 +21,10 @@ type Props = {
 };
 
 /*
-  One request, built to the Figma "Dialog (Dashboard · Collab Concierge)" frame: white cards
+  One request, built to the Figma "Dialog (Dashboard · Collab Concierge)" frame (the page is now Requests): white cards
   stacked on a grey sheet. Who it is, the fit checker, what they want, Benable's review,
   how to reach them, then a note back to the Concierge.
-  A side panel, so the list stays in view and ← → steps through requests.
+  A dialog centered over the list; ← → steps through requests.
 */
 export default function RequestPanel(props: Props) {
   const { creator, onClose } = props;
@@ -39,19 +40,23 @@ export default function RequestPanel(props: Props) {
   useEffect(() => {
     const before = document.activeElement as HTMLElement | null;
     const html = document.documentElement;
-    const overflow = html.style.overflow;
+    const { overflow, paddingRight } = html.style;
+    // where scrollbars take up room, hiding the page's would shift it sideways, so its width stays held
+    const gap = window.innerWidth - html.clientWidth;
     html.style.overflow = "hidden";
+    if (gap > 0) html.style.paddingRight = `${gap}px`;
     html.style.setProperty("--toast-lift", "76px"); // toasts float above the panel's buttons
     closeRef.current?.focus({ preventScroll: true });
     return () => {
       html.style.overflow = overflow;
+      html.style.paddingRight = paddingRight;
       html.style.removeProperty("--toast-lift");
       before?.focus?.({ preventScroll: true });
     };
   }, []);
 
   return (
-    <motion.div className="fixed inset-0 z-[60]" initial="hidden" animate="shown" exit="hidden">
+    <motion.div className="fixed inset-0 z-[60] flex items-center justify-center sm:p-6" initial="hidden" animate="shown" exit="hidden">
       <motion.div
         aria-hidden="true"
         className="absolute inset-0 bg-black/30"
@@ -63,9 +68,9 @@ export default function RequestPanel(props: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="absolute inset-y-0 right-0 flex w-full flex-col overflow-hidden bg-[#f2f2f2] leading-[normal] shadow-[0_40px_80px_-30px_rgba(22,26,53,0.45)] sm:inset-y-3 sm:right-3 sm:w-[min(540px,calc(100vw-24px))] sm:rounded-[24px]"
-        variants={reduce ? { hidden: { opacity: 0 }, shown: { opacity: 1 } } : { hidden: { x: "104%" }, shown: { x: 0 } }}
-        transition={{ duration: 0.5, ease: EASE }}
+        className="relative flex h-full w-full flex-col overflow-clip bg-[#f2f2f2] leading-[normal] shadow-[0_40px_80px_-30px_rgba(22,26,53,0.45)] sm:h-[min(880px,100%)] sm:w-[540px] sm:max-w-full sm:rounded-[24px]"
+        variants={reduce ? { hidden: { opacity: 0 }, shown: { opacity: 1 } } : { hidden: { opacity: 0, y: 24, scale: 0.98 }, shown: { opacity: 1, y: 0, scale: 1 } }}
+        transition={{ duration: 0.4, ease: EASE }}
       >
         <header
           className={`relative z-10 mx-px mt-px flex h-16 shrink-0 items-center gap-3 border-b-[0.5px] bg-white pl-6 pr-2.5 transition-colors duration-200 sm:rounded-t-[23px] ${scrolled ? "border-[#e3e3e3]" : "border-transparent"}`}
@@ -163,12 +168,9 @@ function Body({ creator: c, status, business, onPrev, onNext, onClose, onDecide,
   return (
     <motion.div className="flex min-h-0 flex-1 flex-col" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
       <div ref={scroller} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain">
-        <Profile creator={c} bioRef={bio} />
         <FitChecker creator={c} status={status} />
-        <Section className="flex flex-col gap-4">
-          <Asking creator={c} />
-          <Wants creator={c} />
-        </Section>
+        <Profile creator={c} bioRef={bio} />
+        <Proposal creator={c} />
         <Review creator={c} />
         <Section>
           <div className="flex flex-col gap-3">
@@ -258,7 +260,7 @@ function Rich({ text }: { text: string }) {
 }
 
 const SOCIAL: Record<Social, { label: string; href: (h: string) => string; icon: string }> = {
-  instagram: { label: "Instagram", href: (h) => `https://www.instagram.com/${h}`, icon: "/img/request/ig.svg" },
+  instagram: { label: "Instagram", href: (h) => `https://www.instagram.com/${h}`, icon: "/img/instagram.svg" },
   tiktok: { label: "TikTok", href: (h) => `https://www.tiktok.com/@${h}`, icon: "/img/request/tiktok.svg" },
 };
 
@@ -304,7 +306,7 @@ const statBox = "flex h-[60px] items-center justify-between rounded-[12px] borde
 function Profile({ creator: c, bioRef }: { creator: Creator; bioRef: RefObject<HTMLParagraphElement | null> }) {
   const a = audience(c);
   return (
-    <section className="flex shrink-0 flex-col gap-5 bg-white px-6 pb-5">
+    <section className="flex shrink-0 flex-col gap-5 bg-white px-6 pb-5 pt-6">
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <span className="size-14 shrink-0 overflow-hidden rounded-full border border-white bg-white drop-shadow-[0_4px_7px_rgba(0,0,0,0.08)]">
@@ -344,7 +346,7 @@ function Profile({ creator: c, bioRef }: { creator: Creator; bioRef: RefObject<H
             >
               <span className="flex items-center gap-1">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/img/request/ig-small.svg" alt="Instagram" width={13} height={13} className="-m-[0.5px]" />
+                <img src="/img/instagram.svg" alt="Instagram" width={13} height={13} />
                 {c.engagement}
               </span>
             </Stat>
@@ -387,20 +389,20 @@ function Profile({ creator: c, bioRef }: { creator: Creator; bioRef: RefObject<H
 }
 
 /*
-  The fit gauge: four arcs on one circle, the active one in full color, a needle pointing at it.
-  Geometry is the Figma frame's, measured: 95×75 box, arcs r 43.45 around (47.45, 46.55),
-  needle pivots on the dot at (47.45, 42.75).
+  The fit gauge: three arcs on one circle, one per verdict, the active one in full color,
+  a needle pointing at it. Geometry is the Figma frame's, measured: 95×75 box, arcs r 43.45
+  around (47.45, 46.55), needle pivots on the dot at (47.45, 42.75). The arcs share the
+  frame's 240° sweep; the gaps are 15.4°, about 2px wider than Figma's at the 76px size.
 */
 const ARCS: { from: number; to: number; pale: string }[] = [
-  { from: 149.99, to: 200.39, pale: "#FFDADE" },
-  { from: -147.51, to: -97.11, pale: "#F4E6D3" },
-  { from: -82.77, to: -32.37, pale: "#EDF5CE" },
-  { from: -20.42, to: 29.98, pale: "#D8EDDB" },
+  { from: 149.99, to: 219.72, pale: "#FFDADE" },
+  { from: -124.88, to: -55.15, pale: "#F4E6D3" },
+  { from: -39.75, to: 29.98, pale: "#D8EDDB" },
 ];
 
 const GAUGE: Record<Fit, { label: string; arc: number; color: string; needle: number; box: string; boxText: string; pill: string }> = {
-  strong: { label: "Strong fit", arc: 3, color: "#3CA44F", needle: 7.48, box: "#f2fef7", boxText: "#3f5c3a", pill: "#3ca44f" },
-  maybe: { label: "Maybe", arc: 1, color: "#E9A23B", needle: -122.3, box: "#fff9ef", boxText: "#6b4b16", pill: "#e9a23b" },
+  strong: { label: "Strong fit", arc: 2, color: "#3CA44F", needle: 7.48, box: "#f2fef7", boxText: "#3f5c3a", pill: "#3ca44f" },
+  maybe: { label: "Maybe", arc: 1, color: "#E9A23B", needle: -90, box: "#fff9ef", boxText: "#6b4b16", pill: "#e9a23b" },
   no: { label: "Not a fit", arc: 0, color: "#E5484D", needle: 175.2, box: "#fff4f5", boxText: "#7d2f39", pill: "#e5484d" },
 };
 
@@ -417,89 +419,70 @@ function arcPath(from: number, to: number) {
   return `M ${pt(from)} A ${R} ${R} 0 0 1 ${pt(to)}`;
 }
 
+/* drawn on the 95×75 Figma grid, shown at the redesign's 76×60 (0.8×), so strokes land on its 5.6 / 1.6 */
 function Gauge({ fit }: { fit: Fit }) {
   const g = GAUGE[fit];
   const reduce = useReducedMotion();
+  const shadow = `needle${useId().replace(/[^\w-]/g, "")}`;
   const rad = (g.needle * Math.PI) / 180;
   const at = (d: number) => ({ x: PIVOT.x + d * Math.cos(rad), y: PIVOT.y + d * Math.sin(rad) });
   const [a, b] = [at(3.25), at(42.1)];
   return (
-    <svg width={95} height={75} viewBox="0 0 95 75" overflow="visible" aria-hidden="true">
+    <svg width={76} height={60} viewBox="0 0 95 75" overflow="visible" aria-hidden="true" className="shrink-0">
+      <defs>
+        <filter id={shadow} x="-20%" y="-50%" width="140%" height="200%">
+          <feDropShadow dx={0} dy={2} stdDeviation={1} floodColor="#000" floodOpacity={0.12} />
+        </filter>
+      </defs>
       {ARCS.map((arc, i) => (
         <path key={i} d={arcPath(arc.from, arc.to)} stroke={i === g.arc ? g.color : arc.pale} strokeWidth={7} strokeLinecap="round" fill="none" />
       ))}
-      <motion.line
-        x1={a.x}
-        y1={a.y}
-        x2={b.x}
-        y2={b.y}
-        stroke="black"
-        strokeWidth={3}
-        strokeLinecap="round"
-        style={{ transformOrigin: `${PIVOT.x}px ${PIVOT.y}px`, transformBox: "view-box" }}
-        initial={reduce ? false : { rotate: 175.2 - g.needle }}
-        animate={{ rotate: 0 }}
-        transition={{ duration: 1.1, ease: EASE, delay: 0.2 }}
-      />
-      <circle cx={PIVOT.x} cy={PIVOT.y} r={4} fill="white" stroke="black" strokeWidth={2} />
+      <g filter={`url(#${shadow})`}>
+        <motion.line
+          x1={a.x}
+          y1={a.y}
+          x2={b.x}
+          y2={b.y}
+          stroke="black"
+          strokeWidth={3}
+          strokeLinecap="round"
+          style={{ transformOrigin: `${PIVOT.x}px ${PIVOT.y}px`, transformBox: "view-box" }}
+          initial={reduce ? false : { rotate: 175.2 - g.needle }}
+          animate={{ rotate: 0 }}
+          transition={{ duration: 1.1, ease: EASE, delay: 0.2 }}
+        />
+        <circle cx={PIVOT.x} cy={PIVOT.y} r={4} fill="white" stroke="black" strokeWidth={2} />
+      </g>
     </svg>
   );
 }
 
+/* the redesigned fit checker (Design Labs 15523:18381), first thing in the dialog:
+   the Benable tile and verdict beside a small gauge, then the one-line reason */
 function FitChecker({ creator: c, status }: { creator: Creator; status: Status }) {
   const g = GAUGE[c.fit];
-  const aside =
-    status === "forward" ? (
-      <span className="inline-flex items-center gap-1 font-medium text-[#3ca44f]">
-        <RiCheckLine size={15} aria-hidden="true" /> Moving forward
-      </span>
-    ) : status === "declined" ? (
-      <span className="font-medium text-[#aaa]">Declined</span>
-    ) : (
-      <span className="text-[#aaa]">{longDate(c.requested)}</span>
-    );
+  const decided = status === "forward" ? " · Interested" : status === "declined" ? " · Declined" : "";
   return (
-    <Section>
-      <div className="flex flex-col gap-3">
-        <Heading aside={aside}>Fit checker</Heading>
-        <div className="relative z-10 grid h-[153px] place-items-center rounded-[12px] border-[0.5px] border-[#e3e3e3] bg-white">
-          <div className="flex w-[95px] flex-col items-center gap-3">
-            <Gauge fit={c.fit} />
-            <p className="w-full text-center text-[16px]/[19px] font-bold" style={{ color: g.color }}>
+    <section className="flex shrink-0 flex-col gap-6 bg-white px-6 pb-6">
+      <div className="flex h-[60px] items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <BrandIcon size={48} className="!rounded-[8px]" />
+          <div className="flex min-w-0 flex-col gap-1">
+            <p className="text-[16px] font-semibold leading-[normal]" style={{ color: g.color }}>
               {g.label}
+            </p>
+            <p className="truncate text-[12px]/[16px] text-[#717171]">
+              Collab requested {longDate(c.requested)}
+              {decided}
             </p>
           </div>
         </div>
+        <Gauge fit={c.fit} />
       </div>
-      <p
-        className="-mt-[39px] rounded-b-[12px] outline-solid outline-[0.5px] -outline-offset-[0.5px] outline-[#e3e3e3] px-[25px] pb-[11px] pt-[51px] text-center text-[14px]/[17px]"
-        style={{ background: g.box, color: g.boxText }}
-      >
+      <p className="rounded-[12px] border-[0.5px] border-[#e3e3e3] px-[25px] py-[11px] text-center text-[16px] leading-[normal]" style={{ background: g.box, color: g.boxText }}>
         {c.verdict}
       </p>
-    </Section>
-  );
-}
-
-/* a stable, made-up time for the DM stamp, so it doesn't change between renders */
-function stamp(c: Creator) {
-  const n = [...c.id].reduce((s, ch) => s + ch.charCodeAt(0), 0);
-  return `${shortDate(c.requested).toUpperCase()} AT ${9 + (n % 9)}:${String(n % 60).padStart(2, "0")}`;
-}
-
-function Asking({ creator: c }: { creator: Creator }) {
-  return (
-    <div className="flex flex-col gap-3">
-      <Heading>What they&apos;re asking</Heading>
-      <div className="flex flex-col gap-4 rounded-[12px] outline-solid outline-[0.5px] -outline-offset-[0.5px] outline-[#e3e3e3] bg-[#fafafa] pb-[15px] pt-5 font-[-apple-system,'SF_Pro_Text','SF_Pro','Helvetica_Neue',Inter,sans-serif]">
-        <p className="text-center text-[10px]/[12px] text-[#6f7376]">{stamp(c)}</p>
-        <div className="flex items-end gap-2.5 pl-3 pr-10">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={c.avatar} alt="" width={24} height={24} className="size-6 shrink-0 rounded-full object-cover" />
-          <p className="min-w-0 flex-1 rounded-[16px] bg-[#eef2f5] p-3 text-[14px]/[17px] tracking-[-0.3px] text-[#0f1316]">{c.proposal.create}</p>
-        </div>
-      </div>
-    </div>
+    </section>
   );
 }
 
@@ -517,27 +500,28 @@ function Row({ icon, label, children }: { icon: string; label: string; children:
   );
 }
 
-function Wants({ creator: c }: { creator: Creator }) {
+/* "Their proposal" (Design Labs 15524:60982): each answer from the creator's form under its question */
+function Proposal({ creator: c }: { creator: Creator }) {
   const rows = [
-    { icon: "/img/request/want.svg", label: "They'd like", value: c.proposal.want },
-    { icon: "/img/request/payment.svg", label: "Payment", value: c.proposal.payment, warn: c.proposal.payment.startsWith("Yes") },
-    { icon: "/img/request/based.svg", label: "Based in", value: c.proposal.based },
-    ...(c.proposal.extra ? [{ icon: "/img/request/extra.svg", label: "Anything else", value: c.proposal.extra }] : []),
+    { label: "What they'd create or do for you", value: c.proposal.create },
+    { label: "What they'd like from you", value: c.proposal.want },
+    ...(c.proposal.extra ? [{ label: "Anything else", value: c.proposal.extra }] : []),
+    { label: "Payment", value: c.proposal.payment, warn: c.proposal.payment.startsWith("Yes") },
   ];
   return (
-    <div className="flex flex-col gap-3">
-      <Heading>What they&apos;d like from you</Heading>
-      <div className="flex flex-col gap-[13.33px] rounded-[12px] outline-solid outline-[0.5px] -outline-offset-[0.5px] outline-[#e3e3e3] bg-[#fafafa] p-3">
-        {rows.map((r, i) => (
-          <div key={r.label} className="contents">
-            {i > 0 && <Rule />}
-            <Row icon={r.icon} label={r.label}>
-              <span className={r.warn ? "font-medium text-[#c23a56]" : undefined}>{r.value}</span>
-            </Row>
-          </div>
-        ))}
-      </div>
-    </div>
+    <section className="flex shrink-0 flex-col gap-4 bg-white p-6">
+      <h3 className="text-[16px]/[16px] font-bold text-[#1c1c1c]">Their proposal</h3>
+      {rows.map((r) => (
+        <div key={r.label} className="flex flex-col gap-2">
+          <p className="text-[14px]/[16px] font-medium text-[#1c1c1c]">{r.label}</p>
+          <p
+            className={`rounded-[8px] border-[0.5px] border-[#e3e3e3] bg-[#f4f4f4] p-3 text-[14px] leading-[normal] shadow-[0_4px_32px_0_rgba(0,0,0,0.04)] ${r.warn ? "font-medium text-[#c23a56]" : "text-[#717171]"}`}
+          >
+            {r.value}
+          </p>
+        </div>
+      ))}
+    </section>
   );
 }
 
@@ -691,7 +675,7 @@ function Footer({ creator: c, status, onNext, onDecide, onOpen }: { creator: Cre
   const back = (
     <button type="button" onClick={() => onDecide("new")} className={soft}>
       <RiArrowGoBackLine size={15} aria-hidden="true" />
-      Back to requests
+      Back to New
     </button>
   );
 
@@ -727,10 +711,16 @@ function Footer({ creator: c, status, onNext, onDecide, onOpen }: { creator: Cre
 
 /* a sheet that rises inside the panel, over a dimmed request */
 function Sheet({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
+  const panel = useRef<HTMLDivElement>(null);
+  /* focus its main button without scrolling: autoFocus would scroll the panel to reach it while it's still below the fold */
+  useEffect(() => {
+    panel.current?.querySelector<HTMLElement>("[data-autofocus]")?.focus({ preventScroll: true });
+  }, []);
   return (
     <motion.div className="absolute inset-0 z-10 flex flex-col justify-end" initial="hidden" animate="shown" exit="hidden">
       <motion.div aria-hidden="true" className="absolute inset-0 bg-[#161a35]/20" variants={{ hidden: { opacity: 0 }, shown: { opacity: 1 } }} transition={{ duration: 0.3 }} onClick={onClose} />
       <motion.div
+        ref={panel}
         role="dialog"
         aria-label={label}
         className="relative max-h-[90%] overflow-y-auto rounded-t-[24px] bg-white px-6 pb-[max(20px,env(safe-area-inset-bottom))] pt-6 shadow-[0_-24px_60px_-24px_rgba(22,26,53,0.35)] sm:px-8"
@@ -770,19 +760,20 @@ function DeclineSheet({ creator: c, business, onCancel, onConfirm }: { creator: 
           Edit your decline message
         </button>
       )}
-      <div className="mt-6 flex justify-between gap-2">
+      {/* laid out like the panel's footer: right-aligned, the main action at the footer's width */}
+      <div className="mt-6 flex justify-end gap-2">
         <button type="button" onClick={onCancel} className={soft}>
           Cancel
         </button>
         <button
           type="button"
-          autoFocus={!editing}
+          data-autofocus
           disabled={!msg.trim()}
           onClick={() => {
             if (editing) saveDeclineMessage(msg);
             onConfirm();
           }}
-          className={`${solid} disabled:opacity-25`}
+          className={`${solid} w-[216px] disabled:opacity-25`}
         >
           Decline and send
         </button>
@@ -799,8 +790,15 @@ function ForwardSheet({ creator: c, business, onCancel, onConfirm }: { creator: 
     <>
       <SheetTitle title={`Great news for ${c.first} 🎉`} sub={`Here's how to reach ${c.first} directly. Tap to open, or copy.`} />
       <Contacts creator={c} className="mt-4" />
-      <label htmlFor={id} className="mt-5 flex cursor-pointer items-center gap-3">
-        <input id={id} type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} className="h-[18px] w-[18px] shrink-0 cursor-pointer accent-[#111]" />
+      {/* a native checkbox for keyboard and screen readers, drawn as a soft violet box whose tick pops in */}
+      <label htmlFor={id} className="relative mt-5 flex cursor-pointer select-none items-center gap-3">
+        <input id={id} type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} className="peer sr-only" />
+        <span
+          aria-hidden="true"
+          className="grid size-5 shrink-0 place-items-center rounded-[6px] border-[1.5px] border-[#d4d4dc] bg-white text-white transition-[background-color,border-color,box-shadow] duration-200 peer-checked:border-[#7a5cfa] peer-checked:bg-[#7a5cfa] peer-focus-visible:shadow-[0_0_0_3px_rgba(122,92,250,0.25)] [&>svg]:scale-50 [&>svg]:opacity-0 [&>svg]:transition-[transform,opacity] [&>svg]:duration-200 peer-checked:[&>svg]:scale-100 peer-checked:[&>svg]:opacity-100"
+        >
+          <RiCheckLine size={15} />
+        </span>
         <span className="text-[14.5px] text-ink">Also let {c.first} know you&apos;re moving forward</span>
       </label>
       <AnimatePresence initial={false}>
@@ -810,11 +808,11 @@ function ForwardSheet({ creator: c, business, onCancel, onConfirm }: { creator: 
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="mt-6 flex justify-between gap-2">
+      <div className="mt-6 flex justify-end gap-2">
         <button type="button" onClick={onCancel} className={soft}>
           Cancel
         </button>
-        <button type="button" autoFocus onClick={() => onConfirm(notify && !!msg.trim())} className={solid}>
+        <button type="button" data-autofocus onClick={() => onConfirm(notify && !!msg.trim())} className={`${solid} w-[216px]`}>
           Move forward
         </button>
       </div>

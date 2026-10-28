@@ -187,7 +187,7 @@ White, 1px `line` border, 24–28px radius, soft indigo shadow, 24px padding. Li
 - Icons swap with a 300ms fade and scale, in a fixed 20px slot, so rows never shift.
 
 ### Tabs
-A segmented pill: a light grey track (`#eef0f3`) with a white thumb under the active option that slides between options (a `motion` layout animation). Used for Share / Dashboard in the header (these are real routes, so the thumb follows the URL) and for the Fit / Date sort. The dashboard's Requests / Moving forward / Declined filter is the same idea at full width with 10px corners, each label followed by its count. Lists below it use quiet section labels with a hairline running to the edge ("Strong fit 3 ———— Sort by date") instead of boxed headers.
+A segmented pill: a light grey track (`#eef0f3`) with a white thumb under the active option that slides between options (a `motion` layout animation). Used for Share / Requests in the header (these are real routes, so the thumb follows the URL) and for the Fit / Date sort. The Requests page's New / Interested / Declined filter is the same idea at full width with 10px corners, each label followed by its count. Lists below it use quiet section labels with a hairline running to the edge ("Strong fit 3 ———— Sort by date") instead of boxed headers.
 
 ### Toast
 A dark ink pill at the bottom centre with white 14px text. It slides up and fades in, then disappears after 2.6 seconds. Used for "next on the build list" messages.
@@ -213,7 +213,7 @@ Remix Icon line icons (`@remixicon/react`) at 16–20px, in ink, muted or violet
 9. **FAQ:** an accordion.
 10. **Get started and footer:** the same sign-up pill, a giant soft Benable wordmark, and the footer card.
 
-**Sign-up flow:** handle, then "is this you?", then `/start` (setup checklist and email), then `/share` (the link and the reply to paste) and `/dashboard` (every creator who used the link, vetted, with a side panel per request). `/start`, `/share` and `/dashboard` share one layout, so the header stays put between them.
+**Sign-up flow:** handle, then "is this you?", then `/start` (setup checklist and email), then `/share` (the link and the reply to paste) and `/requests` (every creator who used the link, vetted, with a side panel per request). `/customize` lets the business edit its welcome DM, add its own questions (a text box or a list to pick from, asked after ours) and edit its thank-you DM, with the real creator flow running live in the iPhone frame beside it. `/start`, `/share`, `/requests` and `/customize` share one layout, so the header stays put between them.
 
 **Creator side:** `/c/<handle>` is what a creator sees after the business replies with its link: one question per screen (Socials, Collab, Audience, Details), a sticky purple button, the draft saved as they type. `?preview=1` adds a "This is what creators see" bar for the business testing its own link.
 

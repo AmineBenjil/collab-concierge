@@ -1,41 +1,22 @@
 "use client";
 
-import { RiArrowLeftLine, RiArrowLeftSLine, RiArticleLine, RiLockFill, RiLoopRightLine, RiMoreFill, RiRefreshLine } from "@remixicon/react";
+import { RiArrowLeftLine, RiRefreshLine } from "@remixicon/react";
 import { motion } from "motion/react";
 import Link from "next/link";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type Ref } from "react";
 import { FRAME_RATIO, PT_H, PT_W, SCREEN, StatusBar } from "../Phone";
 
 /*
   Desktop "see what creators see": the real flow, running in a phone-sized iframe (so it gets a true
   mobile viewport, its own scrolling and its own sheets) inside the same iPhone 16 Pro frame as the
-  landing page, under an iOS status bar and above Safari's compact bottom bar.
+  landing page, under the iOS status bar and Chrome's address bar (Design Labs 15526:88239).
 */
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-const STATUS = 54;
-const BAR = 80; // Safari's floating bottom bar plus the home indicator
-const IOS_GLASS = {
-  background: "rgba(255,255,255,0.72)",
-  backdropFilter: "blur(24px) saturate(180%)",
-  WebkitBackdropFilter: "blur(24px) saturate(180%)",
-  boxShadow: "0 4px 18px -4px rgba(0,0,0,0.16), inset 0 0 0 0.5px rgba(0,0,0,0.08)",
-};
+const CHROME = 94; // status bar plus Chrome's top address bar
 
 export default function PreviewDevice({ handle, draftKey }: { handle: string; draftKey: string }) {
-  const wrap = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState<number | null>(null);
   const [run, setRun] = useState(0);
-
-  useLayoutEffect(() => {
-    const el = wrap.current;
-    if (!el) return;
-    const measure = () => setScale((el.getBoundingClientRect().width * (SCREEN.width / 100)) / PT_W);
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
 
   const restart = () => {
     try {
@@ -44,8 +25,6 @@ export default function PreviewDevice({ handle, draftKey }: { handle: string; dr
     setRun((r) => r + 1);
   };
 
-  const s = scale ?? 0.8;
-  const screenBox = { left: `${SCREEN.left}%`, top: `${SCREEN.top}%`, width: `${SCREEN.width}%`, height: `${SCREEN.height}%`, borderRadius: 51 * s };
   const share = `/share?handle=${encodeURIComponent(handle)}`;
 
   return (
@@ -75,31 +54,8 @@ export default function PreviewDevice({ handle, draftKey }: { handle: string; dr
           </div>
         </motion.div>
 
-        <motion.div
-          ref={wrap}
-          className="relative h-[min(880px,calc(100svh-80px))] shrink-0"
-          style={{ aspectRatio: `1 / ${FRAME_RATIO}` }}
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: EASE, delay: 0.1 }}
-        >
-          <div className="pointer-events-none absolute inset-x-[10%] bottom-[2%] top-[6%] rounded-[60px] bg-[rgba(50,25,140,0.35)] blur-[40px]" />
-          <div className="absolute bg-black" style={screenBox} />
-          <div className="absolute overflow-hidden bg-white" style={{ ...screenBox, isolation: "isolate" }}>
-            <div className="ios absolute left-0 top-0 origin-top-left overflow-hidden bg-white" style={{ width: PT_W, height: PT_H, transform: `scale(${s})`, opacity: scale === null ? 0 : 1 }}>
-              <StatusBar />
-              <iframe
-                key={run}
-                src={`/c/${encodeURIComponent(handle)}?embed=1`}
-                title="Your Collab Concierge link, as a creator sees it"
-                className="absolute left-0 w-full border-0 bg-white"
-                style={{ top: STATUS, height: PT_H - STATUS - BAR }}
-              />
-              <SafariBar />
-            </div>
-          </div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/img/iphone-16-pro.png" alt="" draggable={false} className="pointer-events-none absolute inset-0 h-full w-full" />
+        <motion.div className="shrink-0" initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE, delay: 0.1 }}>
+          <CreatorPhone key={run} src={`/c/${encodeURIComponent(handle)}?embed=1`} className="h-[min(880px,calc(100svh-80px))]" />
         </motion.div>
       </div>
 
@@ -111,27 +67,54 @@ export default function PreviewDevice({ handle, draftKey }: { handle: string; dr
   );
 }
 
-/* iOS 26 Safari, compact tabs: back, the address capsule, and the page menu, floating in glass */
-function SafariBar() {
+/* The phone itself: a creator's link running in an iframe at true iPhone points, scaled into the real
+   frame PNG. Its height comes from className; the width follows the frame's ratio. Customize reuses it. */
+export function CreatorPhone({ src, className = "", frameRef }: { src: string; className?: string; frameRef?: Ref<HTMLIFrameElement> }) {
+  const wrap = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const el = wrap.current;
+    if (!el) return;
+    const measure = () => setScale((el.getBoundingClientRect().width * (SCREEN.width / 100)) / PT_W);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const s = scale ?? 0.8;
+  const screenBox = { left: `${SCREEN.left}%`, top: `${SCREEN.top}%`, width: `${SCREEN.width}%`, height: `${SCREEN.height}%`, borderRadius: 51 * s };
+
   return (
-    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 bg-white" style={{ height: BAR }} aria-hidden="true">
-      <div className="flex items-center gap-[10px] px-[14px] pt-[6px]">
-        <span className="grid h-[44px] w-[44px] shrink-0 place-items-center rounded-full" style={IOS_GLASS}>
-          <RiArrowLeftSLine size={30} color="#000" />
-        </span>
-        <span className="relative flex h-[44px] min-w-0 flex-1 items-center justify-center rounded-full" style={IOS_GLASS}>
-          <RiArticleLine size={20} color="#000" className="absolute left-[14px]" />
-          <span className="flex items-center gap-[4px] text-[15px] font-medium tracking-[-0.2px] text-black">
-            <RiLockFill size={13} color="#000" />
-            benable.com
-          </span>
-          <RiLoopRightLine size={18} color="#000" className="absolute right-[14px]" />
-        </span>
-        <span className="grid h-[44px] w-[44px] shrink-0 place-items-center rounded-full" style={IOS_GLASS}>
-          <RiMoreFill size={26} color="#000" />
-        </span>
+    <div ref={wrap} className={`relative ${className}`} style={{ aspectRatio: `1 / ${FRAME_RATIO}` }}>
+      <div className="pointer-events-none absolute inset-x-[10%] bottom-[2%] top-[6%] rounded-[60px] bg-[rgba(50,25,140,0.35)] blur-[40px]" />
+      <div className="absolute bg-black" style={screenBox} />
+      <div className="absolute overflow-hidden bg-white" style={{ ...screenBox, isolation: "isolate" }}>
+        <div className="ios absolute left-0 top-0 origin-top-left overflow-hidden bg-white" style={{ width: PT_W, height: PT_H, transform: `scale(${s})`, opacity: scale === null ? 0 : 1 }}>
+          <ChromeBar />
+          <StatusBar />
+          <iframe ref={frameRef} src={src} title="Your Collab Concierge link, as a creator sees it" className="absolute left-0 w-full border-0 bg-white" style={{ top: CHROME, height: PT_H - CHROME }} />
+        </div>
       </div>
-      <div className="absolute bottom-[8px] left-1/2 h-[5px] w-[134px] -translate-x-1/2 rounded-full bg-black" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/img/iphone-16-pro.png" alt="" draggable={false} className="pointer-events-none absolute inset-0 h-full w-full" />
+    </div>
+  );
+}
+
+/* Chrome on iOS, address bar on top: the grey capsule with the lock and domain, share on the right (Figma's own glyphs) */
+function ChromeBar() {
+  return (
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-white shadow-[0_0.4px_0_0_#ccc]" style={{ height: CHROME }} aria-hidden="true">
+      <div className="absolute bottom-[10px] left-[11px] right-[10px] h-[36px] rounded-[30px] bg-[#e8eaed]" />
+      <div className="absolute bottom-[18px] left-[calc(50%+0.41px)] flex -translate-x-1/2 items-center gap-[7px]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/img/creator/chrome-lock.svg" alt="" width={7.828} height={11.432} className="block" />
+        <span className="whitespace-nowrap text-[18px] leading-[normal] tracking-[-0.18px] text-[#202124]">benable.com</span>
+      </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/img/creator/chrome-share.svg" alt="" width={13.455} height={16.97} className="absolute bottom-[20.47px] right-[26.68px] block" />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Avatar } from "../HandleForm";
 
-/* Shared pieces for the business side: setup, share and dashboard. */
+/* Shared pieces for the business side: setup, share and requests. */
 
 export const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -110,7 +110,7 @@ export function CopyIcon({ text, label }: { text: string; label: string }) {
   );
 }
 
-/* the segmented pill used for Share/Dashboard and the Fit/Date sort: a white thumb slides between options */
+/* the segmented pill used for Share/Requests and the Fit/Date sort: a white thumb slides between options */
 export function Segmented<T extends string>({
   options,
   value,
@@ -118,6 +118,7 @@ export function Segmented<T extends string>({
   id,
   label,
   size = "md",
+  full = false,
 }: {
   options: { value: T; label: ReactNode }[];
   value: T;
@@ -125,9 +126,11 @@ export function Segmented<T extends string>({
   id: string;
   label: string;
   size?: "sm" | "md";
+  /* stretch to the container, options sharing the width equally */
+  full?: boolean;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex items-center rounded-full bg-[#eef0f3] p-1 shadow-[inset_0_1px_2px_rgba(15,20,40,0.06)]">
+    <div role="radiogroup" aria-label={label} className={`flex items-center rounded-full bg-[#eef0f3] p-1 shadow-[inset_0_1px_2px_rgba(15,20,40,0.06)] ${full ? "w-full" : ""}`}>
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -137,7 +140,7 @@ export function Segmented<T extends string>({
             role="radio"
             aria-checked={on}
             onClick={() => onChange(o.value)}
-            className={`relative rounded-full font-semibold transition-colors duration-200 ${size === "sm" ? "px-3 py-1 text-[13px]" : "px-4 py-1.5 text-[14px]"} ${on ? "text-ink" : "text-muted hover:text-ink"}`}
+            className={`relative rounded-full font-semibold transition-colors duration-200 ${full ? "flex-1" : ""} ${size === "sm" ? "px-3 py-1 text-[13px]" : "px-4 py-1.5 text-[14px]"} ${on ? "text-ink" : "text-muted hover:text-ink"}`}
           >
             {on && <Thumb layoutId={id} />}
             <span className="relative">{o.label}</span>

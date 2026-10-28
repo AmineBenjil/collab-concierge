@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import Dashboard from "@/components/concierge/Dashboard";
+import Requests from "@/components/concierge/Requests";
 
 export const metadata: Metadata = {
-  title: "Dashboard · Collab Concierge",
+  title: "Requests · Collab Concierge",
   description: "Every creator who used your link, vetted, with a one-line verdict.",
 };
 
-export default function DashboardPage() {
-  return <Dashboard />;
+export default function RequestsPage() {
+  return <Requests />;
 }

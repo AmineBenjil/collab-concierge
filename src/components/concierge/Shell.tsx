@@ -12,16 +12,16 @@ import { recallEmail, useHandle } from "./store";
 import { EASE, Thumb } from "./ui";
 
 /*
-  The frame around the business side (/start, /share, /dashboard): the soft glow, the floating
+  The frame around the business side (/start, /share, /requests, /customize): the soft glow, the floating
   glass bar and the toast. It's a layout, so it stays mounted while you switch tabs and the
-  Share/Dashboard thumb can slide between them.
+  Share/Requests/Customize thumb can slide between them.
 */
 
 type Toast = { msg: string; action?: { label: string; run: () => void } };
 const ToastContext = createContext<(msg: string, action?: Toast["action"]) => void>(() => {});
 export const useToast = () => useContext(ToastContext);
 
-const LIVE = ["/share", "/dashboard"];
+const LIVE = ["/share", "/requests", "/customize"];
 
 export default function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -80,7 +80,7 @@ export default function Shell({ children }: { children: ReactNode }) {
             </div>
             <AnimatePresence>
               {live && (
-                <motion.div className="flex items-center gap-3 pr-1 sm:gap-5" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }}>
+                <motion.div className="flex items-center gap-2 pr-1 sm:gap-5" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }}>
                   <Tabs pathname={pathname} handle={handle} />
                   <Account handle={handle} />
                 </motion.div>
@@ -135,12 +135,13 @@ function Backdrop() {
   );
 }
 
-/* Share and Dashboard are real pages, so the switch is navigation; the white thumb follows the route */
+/* Share, Requests and Customize are real pages, so the switch is navigation; the white thumb follows the route */
 function Tabs({ pathname, handle }: { pathname: string; handle: string }) {
   const q = `?handle=${encodeURIComponent(handle)}`;
   const tabs = [
     { href: "/share", label: "Share" },
-    { href: "/dashboard", label: "Dashboard" },
+    { href: "/requests", label: "Requests" },
+    { href: "/customize", label: "Customize" },
   ];
   return (
     <div className="flex items-center rounded-full bg-[#eef0f3] p-1 shadow-[inset_0_1px_2px_rgba(15,20,40,0.06)]">
@@ -151,7 +152,7 @@ function Tabs({ pathname, handle }: { pathname: string; handle: string }) {
             key={t.href}
             href={t.href + q}
             aria-current={on ? "page" : undefined}
-            className={`relative rounded-full px-3.5 py-1.5 text-[14px] font-semibold transition-colors duration-200 sm:px-4 ${on ? "text-ink" : "text-muted hover:text-ink"}`}
+            className={`relative rounded-full px-2.5 py-1.5 text-[13.5px] font-semibold transition-colors duration-200 sm:px-4 sm:text-[14px] ${on ? "text-ink" : "text-muted hover:text-ink"}`}
           >
             {on && <Thumb layoutId="concierge-tab-thumb" />}
             <span className="relative">{t.label}</span>

@@ -24,8 +24,8 @@ const SHORTCUTS: { group: string; links: { label: string; href?: string }[] }[] 
       { label: "Home page", href: "/" },
       { label: "Meet your Concierge", href: `/start${q}` },
       { label: "You're live", href: `/share${q}` },
-      { label: "Dashboard", href: `/dashboard${q}` },
-      { label: "A creator pop-up", href: `/dashboard${q}&open=mia` },
+      { label: "Requests", href: `/requests${q}` },
+      { label: "A creator pop-up", href: `/requests${q}&open=mia` },
     ],
   },
   {

@@ -299,7 +299,7 @@ h3 { letter-spacing: -0.025em; line-height: 1.15; }
   .moment-sub { font-size: 20px; }
 }
 
-/* app screens (share, dashboard): the moment style, smaller; one size so the two tabs match */
+/* app screens (share, requests): the moment style, smaller; one size so the two tabs match */
 .dash-title {
   font-family: var(--font-sans);
   font-weight: 800;
