@@ -4,12 +4,15 @@ import {
   RiArrowDownSLine,
   RiArrowLeftSLine,
   RiCheckLine,
+  RiCloseLine,
   RiEyeLine,
+  RiFilePdf2Line,
   RiImageAddLine,
   RiInstagramLine,
   RiLockLine,
   RiListCheck2,
   RiMapPin2Line,
+  RiUpload2Line,
 } from "@remixicon/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
@@ -217,6 +220,21 @@ export default function CreatorFlow({ handle }: { handle: string }) {
     });
   };
 
+  /* the last step's optional files (media kit, past work); the demo only shows them back, nothing is sent */
+  const [files, setFiles] = useState<Attachment[]>([]);
+  const filesRef = useRef(files);
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
+  useEffect(() => () => filesRef.current.forEach((f) => URL.revokeObjectURL(f.url)), []);
+  const addFiles = (list: File[]) =>
+    setFiles((prev) => [...prev, ...list.slice(0, FILES_MAX - prev.length).map((f) => ({ name: f.name, size: f.size, pdf: f.type === "application/pdf", url: URL.createObjectURL(f) }))]);
+  const dropFile = (i: number) =>
+    setFiles((prev) => {
+      URL.revokeObjectURL(prev[i].url);
+      return prev.filter((_, j) => j !== i);
+    });
+
   /* preview: each step types its answers in, then flags the button to tap; leaving the step stops it */
   const [filled, setFilled] = useState<Step | null>(null);
   const [lookup, setLookup] = useState<Lookup>("idle");
@@ -415,7 +433,7 @@ export default function CreatorFlow({ handle }: { handle: string }) {
                     ) : (
                       <NoQuestions />
                     ))}
-                  {step === "extra" && <Extra d={d} set={set} />}
+                  {step === "extra" && <Extra d={d} set={set} files={files} onAdd={addFiles} onRemove={dropFile} />}
                 </motion.div>
               </AnimatePresence>
             </form>
@@ -858,13 +876,68 @@ function Contact({ d, set }: Bind) {
   );
 }
 
-function Extra({ d, set }: Bind) {
+type Attachment = { name: string; size: number; pdf: boolean; url: string };
+const FILES_MAX = 3;
+
+function Extra({ d, set, files, onAdd, onRemove }: Bind & { files: Attachment[]; onAdd: (f: File[]) => void; onRemove: (i: number) => void }) {
   return (
     <>
       <Title sub="Timing preferences, restrictions, limitations, anything else.">Anything else you&apos;d like to add?</Title>
       <Area label="" value={d.extra} onChange={(v) => set("extra", v)} placeholder="Optional" autoFocus className="mt-7" />
+      <Files files={files} onAdd={onAdd} onRemove={onRemove} />
       <p className="mt-3 px-1 text-[13.5px] text-muted">Optional, but the more you share, the better.</p>
     </>
+  );
+}
+
+const fileSize = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`);
+
+/* a dashed tap-to-upload box for a media kit or screenshots of past work, each file listed back with a way to take it out */
+function Files({ files, onAdd, onRemove }: { files: Attachment[]; onAdd: (f: File[]) => void; onRemove: (i: number) => void }) {
+  return (
+    <div className="mt-8">
+      <div className="text-[16px] font-semibold text-ink">Show them your work</div>
+      <p className="mt-1 text-[14px] leading-snug text-muted">A media kit, a rate card, or screenshots of past collabs. PDF or image, up to {FILES_MAX}.</p>
+      {files.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {files.map((f, i) => (
+            <li key={f.url} className="flex items-center gap-3 rounded-[14px] bg-[#f2f2f7] p-2 pr-1.5">
+              <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-[10px] bg-lilac text-violet">
+                {f.pdf ? (
+                  <RiFilePdf2Line size={20} aria-hidden="true" />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={f.url} alt="" className="h-full w-full object-cover" />
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[15px] font-semibold text-ink">{f.name}</div>
+                <div className="text-[13px] text-muted">{fileSize(f.size)}</div>
+              </div>
+              <button type="button" onClick={() => onRemove(i)} aria-label={`Remove ${f.name}`} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink-2 transition-colors hover:bg-[#e6e6ee] hover:text-ink">
+                <RiCloseLine size={18} aria-hidden="true" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {files.length < FILES_MAX && (
+        <label className="mt-3 flex cursor-pointer flex-col items-center justify-center gap-2.5 rounded-[20px] border-[1.5px] border-dashed border-[#76767a] bg-[#fcfcfc] px-4 py-7 text-ink transition-colors hover:bg-[#f6f6f9] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#5035e3]">
+          <RiUpload2Line size={26} aria-hidden="true" />
+          <span className="text-[17px] font-medium">Tap to upload files</span>
+          <input
+            type="file"
+            multiple
+            accept="image/*,application/pdf"
+            className="sr-only"
+            onChange={(e) => {
+              onAdd(Array.from(e.target.files ?? []));
+              e.target.value = "";
+            }}
+          />
+        </label>
+      )}
+    </div>
   );
 }
 
