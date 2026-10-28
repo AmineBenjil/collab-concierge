@@ -75,6 +75,8 @@ const SCRIPT: Partial<Record<Step, [field: keyof Draft, value: string][]>> = {
   ],
   extra: [["extra", "Weekday mornings work best. Happy to tag you in Stories too."]],
 };
+// the preview's stand-in Insights screenshots, dropped into the manual step one by one
+const DEMO_SHOTS = ["/img/creator/insights-overview.svg", "/img/creator/insights-audience.svg", "/img/creator/insights-engagement.svg"];
 const TYPED = new Set<keyof Draft>(["handle", "create", "want", "based", "first", "last", "email", "phone", "extra"]);
 type Lookup = "idle" | "searching" | "found" | "confirmed";
 
@@ -204,12 +206,12 @@ export default function CreatorFlow({ handle }: { handle: string }) {
   useEffect(() => {
     shotsRef.current = shots;
   }, [shots]);
-  useEffect(() => () => shotsRef.current.forEach((u) => u && URL.revokeObjectURL(u)), []);
+  useEffect(() => () => shotsRef.current.forEach((u) => u?.startsWith("blob:") && URL.revokeObjectURL(u)), []);
   const addShot = (i: number, file?: File) => {
     if (!file) return;
     setShots((prev) => {
       const next = [...prev];
-      if (next[i]) URL.revokeObjectURL(next[i]!);
+      if (next[i]?.startsWith("blob:")) URL.revokeObjectURL(next[i]!);
       next[i] = URL.createObjectURL(file);
       return next;
     });
@@ -233,6 +235,13 @@ export default function CreatorFlow({ handle }: { handle: string }) {
       const speed = v.length > 40 ? 22 : 60;
       for (let i = 1; i <= v.length; i++) ts.push(setTimeout(() => put(k, v.slice(0, i)), t + i * speed));
       t += v.length * speed + 380;
+    }
+    if (step === "manual") {
+      // each empty slot gets its screenshot in turn; ones the business added itself stay
+      DEMO_SHOTS.forEach((src, i) => {
+        ts.push(setTimeout(() => setShots((p) => p.map((u, j) => (j === i ? (u ?? src) : u))), t));
+        t += 900;
+      });
     }
     if (step === "socials") {
       // the same "is this you?" as the hero: look the handle up, then ask
@@ -323,12 +332,11 @@ export default function CreatorFlow({ handle }: { handle: string }) {
       const share = `/share?handle=${encodeURIComponent(handle)}`;
       if (mode === "embed") return void (window.top ?? window).location.assign(share);
       if (preview) return router.push(share);
+      // a real creator heads to the business's Instagram; the request is in, so the draft goes
       try {
         localStorage.removeItem(draftKey(handle));
       } catch {}
-      setD(EMPTY);
-      setShots([null, null, null]);
-      return go("opener", -1);
+      return void window.open(`https://www.instagram.com/${encodeURIComponent(handle)}`, "_blank", "noopener");
     }
     go(NEXT[step], 1, nextQ);
   };
@@ -775,8 +783,15 @@ function Manual({ name, shots, onAdd }: { name: string; shots: (string | null)[]
             <li key={s.title} className={`flex items-center gap-3.5 rounded-[20px] border p-3 transition-colors duration-300 ${src ? "border-mint/30 bg-mint/[0.05]" : "border-line bg-white"}`}>
               <span className="relative grid h-14 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-lilac text-[15px] font-bold text-violet">
                 {src ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={src} alt={`${s.title} screenshot`} className="h-full w-full object-cover" />
+                  <motion.img
+                    key={src}
+                    src={src}
+                    alt={`${s.title} screenshot`}
+                    className="h-full w-full object-cover"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: "spring", stiffness: 380, damping: 26 }}
+                  />
                 ) : (
                   i + 1
                 )}
@@ -921,7 +936,7 @@ function NoQuestions() {
 
 /*
   The thank-you screen, built to Design Labs 15528:88425: the same photo and name pill as the opener,
-  "Amazing!" and what happens next, the business's thank-you DM, a nudge to follow them, and Done.
+  "Amazing!" and what happens next, the business's thank-you DM, and one button to follow them on Instagram.
 */
 function Done({ name, handle, thanks, onDone, hint = false }: { name: string; handle: string; thanks: string; onDone: () => void; hint?: boolean }) {
   return (
@@ -944,24 +959,9 @@ function Done({ name, handle, thanks, onDone, hint = false }: { name: string; ha
         </Enter>
       )}
 
-      <Enter i={3} className="relative mt-[20.6px] flex flex-col gap-3 px-5">
-        <p className="text-[16px] font-semibold leading-[normal] tracking-[-0.5px] text-black">Follow us on Instagram</p>
-        <div className="flex items-center justify-between gap-3 rounded-[16px] border-[0.5px] border-[#e3e3e3] bg-[rgba(247,247,247,0.99)] py-3 pl-3 pr-2">
-          <span className="min-w-0 truncate text-[14px] font-semibold leading-[normal] text-black">@{handle}</span>
-          <a
-            href={`https://www.instagram.com/${encodeURIComponent(handle)}`}
-            target="_blank"
-            rel="noopener"
-            className="flex h-8 w-[88px] shrink-0 items-center justify-center rounded-[64px] bg-[#1c1c1c] text-[14px] font-medium leading-[normal] text-white transition-colors hover:bg-black"
-          >
-            Follow
-          </a>
-        </div>
-      </Enter>
-
       <div className="sticky bottom-0 z-20 mt-auto px-5 pb-[max(21px,env(safe-area-inset-bottom))] pt-6">
         <CardButton onClick={onDone} hint={hint}>
-          Done
+          Follow @{handle} on Instagram
         </CardButton>
         <p className="mx-auto mt-[14px] w-[295.208px] max-w-full -translate-x-[0.5px] text-center text-[13px] leading-[17px] text-[#4a4a4a]">
           <span className="font-semibold">Benable</span> is an app that connects over 1 million creators with local businesses and brands.

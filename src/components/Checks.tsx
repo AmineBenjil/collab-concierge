@@ -62,7 +62,7 @@ export default function Checks() {
               7 checks before <span className="grad-text">you say yes</span>
             </>
           }
-          sub="We run them as soon as a creator fills in your link, and you get a clear assessment."
+          sub="We run them as soon as a creator applies, and you get a clear assessment."
         />
 
         <div className="mt-12 grid gap-10 lg:mt-20 lg:grid-cols-[1fr_1fr] lg:gap-16">

@@ -28,13 +28,13 @@ const REPLY = "Thanks for reaching out! We handle collab requests here, takes a 
 
 const STEPS: { title: string; who: string; body: string; Icon: RemixiconComponentType }[] = [
   {
-    title: "You share",
+    title: "Share your link",
     who: "You, 10 seconds",
     body: "Answer any collab DM with your link. Same reply every time.",
     Icon: RiClipboardLine,
   },
   {
-    title: "They fill",
+    title: "They apply",
     who: "The creator, 2 minutes",
     body: "Creators say what they're asking for and what they'll post in return.",
     Icon: RiFileList3Line,
@@ -69,7 +69,7 @@ export default function HowItWorks() {
           label="How it works"
           title={
             <>
-              You share a link. They fill it in. We vet. <span className="grad-text">You decide.</span>
+              They apply. We vet. <span className="grad-text">You decide.</span>
             </>
           }
           sub="Your part takes about 10 seconds. We do all the tedious work."

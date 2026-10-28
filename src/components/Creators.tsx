@@ -75,7 +75,7 @@ const CARDS: StackSpreadCard[] = [
     stackOffset: { x: -16, y: 0 },
     stackRotate: -4,
     target: { x: -36, y: -2, rotate: 0, scale: s(6), w: 15, h: 32 },
-    targetSm: { x: -22, y: -19 },
+    targetSm: { x: -22, y: -23 },
     z: 4,
   },
   // top-centre — sm row 2 right
@@ -87,7 +87,7 @@ const CARDS: StackSpreadCard[] = [
     stackOffset: { x: 1, y: -10 },
     stackRotate: -2,
     target: { x: 6, y: -32, rotate: 0, scale: s(5), w: 25, h: 30 },
-    targetSm: { x: 22, y: -19 },
+    targetSm: { x: 22, y: -23 },
     z: 5,
   },
   // mid-right — sm row 3 left
@@ -99,7 +99,7 @@ const CARDS: StackSpreadCard[] = [
     stackOffset: { x: 18, y: 1 },
     stackRotate: 6,
     target: { x: 37, y: 6, rotate: 0, scale: s(4), w: 18, h: 32 },
-    targetSm: { x: -22, y: 20 },
+    targetSm: { x: -22, y: 24 },
     z: 6,
   },
   // bottom-left — sm row 3 right
@@ -111,7 +111,7 @@ const CARDS: StackSpreadCard[] = [
     stackOffset: { x: -6, y: 10 },
     stackRotate: 6,
     target: { x: -24, y: 34, rotate: 0, scale: s(3), w: 22, h: 25 },
-    targetSm: { x: 22, y: 20 },
+    targetSm: { x: 22, y: 24 },
     z: 7,
   },
   // bottom-centre — sm row 4 left
@@ -149,19 +149,26 @@ const CARDS: StackSpreadCard[] = [
 const ROTATE_MS = 4000;
 const FADE_MS = 1400;
 const ROTATE_ORDER = [3, 0, 6, 1, 5, 2, 7, 4];
-// how far a new card may sit from its slot (vw / vh) and how much its width and height may change
+// how far a new card may sit from its slot (vw / vh) and how much it may grow or shrink (its shape never changes)
 const JITTER_X = 3.5;
 const JITTER_Y = 3.5;
-const SIZE_MIN = 0.82;
-const SIZE_MAX = 1.18;
+const SIZE_MIN = 0.85;
+const SIZE_MAX = 1.15;
+
+/*
+  Card sizes are designed on a 1440 x 900 screen, where 1vw and 1.6vh are the same 14.4px. Each card keeps
+  that shape (its aspect ratio) at every size, and its width is the smaller of w vw and w * 1.6 vh, so a
+  tall screen and a short wide one both scale the card down instead of stretching it.
+*/
+const VH_PER_VW = 1.6;
 
 /** what a slot is showing right now: its photo, where it sits relative to the slot, and whether it's fading out */
 interface Slot {
   item: StackSpreadItem;
   dx: number;
   dy: number;
-  fw: number;
-  fh: number;
+  /** size multiplier for this photo */
+  size: number;
   out: boolean;
 }
 
@@ -177,7 +184,7 @@ const PARALLAX_Y = 2.2;
 const PARALLAX_SPRING = { stiffness: 90, damping: 22, mass: 0.6 };
 const parallaxDepth = (i: number, total: number) => (total <= 1 ? 1 : 0.55 + (i / (total - 1)) * 0.75);
 
-const SUB = "Our analysis is based on working with every one of them, so each recommendation comes from real data, not a follower count.";
+const SUB = "Our analysis is based on billions of data points from over 1,000,000 creators.";
 
 const FROM = 800_000;
 const TO = 1_000_000;
@@ -209,22 +216,22 @@ const RESPONSIVE = {
     scale: null as number | null,
     small: false,
     colX: null as number | null,
-    card: null as { w: number; h: number } | null,
+    card: null as { w: number } | null,
   },
   small: {
     scale: 0.72,
     small: true,
     colX: 22,
-    card: { w: 40, h: 20 },
+    card: { w: 30 },
   },
 };
 
 function useResponsive() {
   const [r, setR] = useState(RESPONSIVE.desktop);
   useEffect(() => {
-    // Touch vs. mouse, not raw width: a narrow but mouse-driven window keeps the desktop scatter +
-    // pointer parallax; only real touch devices drop to the stacked column layout.
-    const mq = window.matchMedia("(pointer: coarse)");
+    // Touch devices and phone-width windows drop to the stacked column layout; anything wider with a
+    // mouse keeps the desktop scatter + pointer parallax.
+    const mq = window.matchMedia("(pointer: coarse), (max-width: 639px)");
     const read = () => setR(mq.matches ? RESPONSIVE.small : RESPONSIVE.desktop);
     read();
     mq.addEventListener("change", read);
@@ -322,7 +329,8 @@ function Card({
   scaleMul: number | null;
   isSmall: boolean;
   colX: number | null;
-  fixedCard: { w: number; h: number } | null;
+  /** one width (vw) for every card on phones; each card still keeps its own shape */
+  fixedCard: { w: number } | null;
   /** scale of the cards while clustered, before the scatter */
   stackScale: number;
   /** corner radius on each card, in px (desktop) */
@@ -368,8 +376,8 @@ function Card({
     <motion.div
       className="absolute left-1/2 top-1/2 will-change-transform"
       style={{
-        width: `${(fixedCard ? fixedCard.w : target.w) * slot.fw}vw`,
-        height: `${(fixedCard ? fixedCard.h : target.h) * slot.fh}vh`,
+        width: fixedCard ? `${fixedCard.w * slot.size}vw` : `min(${target.w * slot.size}vw, ${target.w * VH_PER_VW * slot.size}vh)`,
+        aspectRatio: (target.w * VH_PER_VW) / target.h,
         zIndex: card.z ?? 1,
         translate,
         rotate,
@@ -454,7 +462,7 @@ function StackSpreadStage({
   // once spread and on screen, one card at a time fades out and a new photo from the pool fades in nearby
   const onScreen = useInView(wrapRef, { margin: "-20% 0px" });
   const pool = useMemo(() => cards.flatMap((c) => c.items), [cards]);
-  const [slots, setSlots] = useState<Slot[]>(() => cards.map((c) => ({ item: c.items[0], dx: 0, dy: 0, fw: 1, fh: 1, out: false })));
+  const [slots, setSlots] = useState<Slot[]>(() => cards.map((c) => ({ item: c.items[0], dx: 0, dy: 0, size: 1, out: false })));
   const live = useRef(slots);
   useEffect(() => {
     live.current = slots;
@@ -485,9 +493,8 @@ function StackSpreadStage({
               if (Math.abs(dx - cur.dx) + Math.abs(dy - cur.dy) > 3) break;
             }
           }
-          const fw = isSmall ? 1 : rand(SIZE_MIN, SIZE_MAX);
-          const fh = isSmall ? 1 : rand(SIZE_MIN, SIZE_MAX);
-          setSlots((all) => all.map((sl, i) => (i === k ? { item, dx, dy, fw, fh, out: false } : sl)));
+          const size = isSmall ? 1 : rand(SIZE_MIN, SIZE_MAX);
+          setSlots((all) => all.map((sl, i) => (i === k ? { item, dx, dy, size, out: false } : sl)));
         }, FADE_MS)
       );
     }, ROTATE_MS);
