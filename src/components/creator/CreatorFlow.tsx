@@ -427,7 +427,7 @@ export default function CreatorFlow({ handle }: { handle: string }) {
                     </>
                   )}
                 </Primary>
-                <button type="button" onClick={() => setHeadsUp(true)} disabled={connecting} className="mt-1 h-11 w-full rounded-full text-[15px] font-semibold text-ink-2 transition-colors hover:bg-[#f4f3f8] disabled:opacity-40">
+                <button type="button" onClick={() => setHeadsUp(true)} disabled={connecting} className={`${CTA_QUIET} disabled:opacity-40`}>
                   Enter manually
                 </button>
               </>
@@ -556,12 +556,17 @@ function Bubble({ children }: { children: ReactNode }) {
   );
 }
 
+/* every full-width call to action in the flow, sized and coloured like the opener's "Let's go" */
+const CTA = "relative flex h-12 w-full items-center justify-center gap-2 rounded-[12px] bg-[#7a5cfa] px-4 text-[16px] font-medium leading-[normal] text-white transition-[background-color,transform] duration-200 hover:bg-[#6c4ef0] active:scale-[0.985]";
+// the quiet full-width option under a CTA, at the same height and corners
+const CTA_QUIET = "mt-1 h-12 w-full rounded-[12px] text-[16px] font-medium text-ink-2 transition-colors hover:bg-[#f4f3f8]";
+
 function CardButton({ children, onClick, hint = false }: { children: ReactNode; onClick: () => void; hint?: boolean }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="relative flex h-12 w-full items-center justify-center rounded-[12px] bg-[#7a5cfa] px-4 text-[16px] font-medium leading-[normal] text-white transition-[background-color,transform] duration-200 hover:bg-[#6c4ef0] active:scale-[0.985]"
+      className={CTA}
     >
       {children}
       {hint && <TapHint />}
@@ -1164,7 +1169,7 @@ function Primary({ children, busy = false, hint = false, className = "", ...rest
   return (
     <button
       {...rest}
-      className={`relative flex h-[52px] w-full items-center justify-center gap-2 rounded-full bg-[#5035e3] text-[17px] font-semibold text-white transition-[background-color,transform] duration-200 hover:bg-[#4429d6] active:scale-[0.985] disabled:cursor-not-allowed disabled:bg-[#5035e3]/20 disabled:active:scale-100 ${busy ? "cursor-wait" : ""} ${className}`}
+      className={`${CTA} disabled:cursor-not-allowed disabled:bg-[#7a5cfa]/25 disabled:active:scale-100 ${busy ? "cursor-wait" : ""} ${className}`}
     >
       {busy && <span className="h-[18px] w-[18px] animate-spin rounded-full border-2 border-white/30 border-t-white motion-reduce:animate-none" aria-hidden="true" />}
       {children}
@@ -1229,7 +1234,7 @@ function HeadsUp({ onConnect, onManual, onClose }: { onConnect: () => void; onMa
           <Primary type="button" onClick={onConnect} autoFocus>
             <RiInstagramLine size={19} aria-hidden="true" /> Connect Instagram
           </Primary>
-          <button type="button" onClick={onManual} className="mt-1 h-11 w-full rounded-full text-[15px] font-semibold text-ink-2 transition-colors hover:bg-[#f4f3f8]">
+          <button type="button" onClick={onManual} className={CTA_QUIET}>
             Enter data manually
           </button>
         </div>
