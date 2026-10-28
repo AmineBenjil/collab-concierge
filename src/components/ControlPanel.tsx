@@ -15,7 +15,7 @@ const HERO_OPTIONS: { value: HeroBg; label: string; hint: string }[] = [
 ];
 
 /* jump straight to any screen of the demo without walking the flows */
-const DEMO = "foundcoffee";
+const DEMO = "konacoffee";
 const q = `?handle=${DEMO}`;
 const SHORTCUTS: { group: string; links: { label: string; href?: string }[] }[] = [
   {

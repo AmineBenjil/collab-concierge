@@ -18,7 +18,7 @@ export function useHandle() {
     () => new URLSearchParams(window.location.search).get("handle") ?? "",
     () => "",
   );
-  return cleanHandle(raw) || "foundcoffee";
+  return cleanHandle(raw) || "konacoffee";
 }
 
 /* ---------- each creator's status: new request, moving forward, declined ---------- */

@@ -234,18 +234,6 @@ h3 { letter-spacing: -0.025em; line-height: 1.15; }
 }
 @media (prefers-reduced-motion: reduce) { .floater { animation: none; opacity: 1; } }
 
-/* follower faces on the Question 3 globe: pop up from their pin, hold, sink back, repeat */
-.globe-pop { animation: globe-pop 7s cubic-bezier(0.22, 1, 0.36, 1) infinite both; animation-play-state: paused; transform-origin: 50% 100%; }
-.globe-live .globe-pop { animation-play-state: running; }
-@keyframes globe-pop {
-  0%, 4% { opacity: 0; transform: translateY(6px) scale(0.4); }
-  12% { opacity: 1; transform: translateY(0) scale(1); }
-  78% { opacity: 1; transform: translateY(0) scale(1); }
-  88%, 100% { opacity: 0; transform: translateY(4px) scale(0.6); }
-}
-.globe-pulse { animation: globe-pulse 2.6s ease-out infinite; }
-@keyframes globe-pulse { from { transform: scale(1); opacity: 0.45; } to { transform: scale(2.6); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .globe-pop { animation: none; } .globe-pulse { animation: none; opacity: 0; } }
 
 /* section heading + subtext, from Figma (Design Labs 15430:46573): Inter Bold 40 #1c1c1c, Regular 20 #484848,
    both at normal line height. Widths stay narrow (636 / 500) so copy breaks into short, even lines. */

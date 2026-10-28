@@ -5,11 +5,11 @@ import { cleanHandle, displayName } from "@/components/names";
 
 type Props = { params: Promise<{ handle: string }> };
 
-const handleOf = async (params: Props["params"]) => cleanHandle(decodeURIComponent((await params).handle)) || "foundcoffee";
+const handleOf = async (params: Props["params"]) => cleanHandle(decodeURIComponent((await params).handle)) || "konacoffee";
 
 /* the demo café is prerendered; any other handle renders on its first visit */
 export function generateStaticParams() {
-  return [{ handle: "foundcoffee" }];
+  return [{ handle: "konacoffee" }];
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

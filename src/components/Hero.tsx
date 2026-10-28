@@ -18,13 +18,13 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 */
 const MESSAGES = [
   { img: "ana", text: "collab? 🙏" },
-  { img: "joao", text: "gifted visit for 2?" },
+  { img: "joao", text: "free product for a reel?" },
   { img: "clara", text: "can I film here?" },
   { img: "rafa", text: "paid collab? 💸" },
-  { img: "beatriz", text: "loved it 😍" },
+  { img: "beatriz", text: "PR box for a review? 📦" },
   { img: "tiago", text: "rates attached 📎" },
-  { img: "mia", text: "brunch reel for you? ✨" },
-  { img: "ines", text: "free this weekend?" },
+  { img: "mia", text: "try it on camera? ✨" },
+  { img: "ines", text: "gifted visit for 2?" },
 ];
 const LIFE_MS = 9000; // matches .floater's animation duration
 const EVERY_MS = 3100;

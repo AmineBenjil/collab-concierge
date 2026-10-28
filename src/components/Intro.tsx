@@ -12,11 +12,11 @@ import { useIntro } from "./IntroContext";
 */
 
 const DMS = [
-  { who: "mia.eats.lisbon", img: "mia", text: "Hey! Would you be open to a collab? ☕" },
-  { who: "joao.films", img: "joao", text: "Gifted visit for 2 in exchange for a reel? 🙏" },
-  { who: "ana.ribeiro", img: "ana", text: "I have 12K followers, can I come film?" },
+  { who: "mia.eats.la", img: "mia", text: "Hey! Would you be open to a collab? ☕" },
+  { who: "joey.films", img: "joao", text: "Could you send me a product for a reel? 🙏" },
+  { who: "ana.rivera", img: "ana", text: "I have 12K followers, can I come film?" },
   { who: "rafa.costa", img: "rafa", text: "Do you do paid collabs? Rates attached" },
-  { who: "lisbon.bites", img: "nata", text: "Free brunch for a post? 👀" },
+  { who: "la.bites", img: "nata", text: "Gifted visit for 2 for a post? 👀" },
   { who: "travel.with.jon", img: "roasters", text: "Would you host a giveaway with me?" },
   { who: "sofia.ugc", img: "ana", text: "Sent you a DM last week… 🥺" },
 ];

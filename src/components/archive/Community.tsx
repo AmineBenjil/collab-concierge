@@ -123,7 +123,7 @@ const PARALLAX_Y = 2.2;
 const PARALLAX_SPRING = { stiffness: 90, damping: 22, mass: 0.6 };
 const parallaxDepth = (i: number, total: number) => (total <= 1 ? 1 : 0.55 + (i / (total - 1)) * 0.75);
 
-const SUB = "Boat days, vineyard tastings, launch nights. We host our creators all year and know them by name.";
+const SUB = "We've already assessed over 1,000,000 creators in the Benable community. Every recommendation is based on that data.";
 
 const RESPONSIVE = {
   desktop: {

@@ -8,9 +8,9 @@ export function cleanHandle(raw: string) {
 }
 
 /* handles with no separators that we know how to say */
-const KNOWN: Record<string, string> = { foundcoffee: "Found Coffee" };
+const KNOWN: Record<string, string> = { konacoffee: "Kona Coffee" };
 
-/* "found.coffee" → "Found Coffee", "tony" → "Tony" */
+/* "kona.coffee" → "Kona Coffee", "tony" → "Tony" */
 export function displayName(handle: string) {
   if (KNOWN[handle]) return KNOWN[handle];
   return handle

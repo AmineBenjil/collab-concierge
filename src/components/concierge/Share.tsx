@@ -31,7 +31,7 @@ export default function Share() {
           <div className="flex items-center justify-between gap-3 bg-white px-5 py-5 sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/img/ig/foundcoffee.jpg" alt="" className="h-14 w-14 shrink-0 rounded-full border border-white object-cover drop-shadow-[0_4px_7px_rgba(0,0,0,0.08)]" />
+              <img src="/img/ig/konacoffee.jpg" alt="" className="h-14 w-14 shrink-0 rounded-full border border-white object-cover drop-shadow-[0_4px_7px_rgba(0,0,0,0.08)]" />
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="truncate text-[16px] font-semibold leading-[19px] text-black">{name}</span>

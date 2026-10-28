@@ -9,11 +9,11 @@ const EASE = [0.22, 1, 0.36, 1] as const;
 const CHECKS = [
   { title: "Fake followers", body: "We look for bought followers and bot-like accounts behind the number.", stat: "2%", caption: "of Mia's followers look suspicious. Well under what we flag." },
   { title: "Real engagement", body: "Likes and comments that come from real people, at a rate that adds up.", stat: "6.4%", caption: "average engagement on her last 12 reels." },
-  { title: "Audience fit", body: "Age, demographic and location fit with your business.", stat: "91%", caption: "of her audience lives within 15 km of your café." },
+  { title: "Audience fit", body: "Age, demographic and location fit with your business.", stat: "84%", caption: "of her audience is in the US, most of it in Los Angeles." },
   { title: "Content quality", body: "Well lit, on brand, consistent. Content you'd feel great about.", stat: "4×", caption: "a week she posts food content in a style that fits yours." },
   { title: "Red flags", body: "Hate speech, scams, trashing other businesses, serial freeloaders.", stat: "0", caption: "red flags found across her account history." },
-  { title: "Past collabs", body: "How their previous collabs actually performed.", stat: "2", caption: "café collabs in the last 6 months, both above her average." },
-  { title: "Audience size", body: "Big enough to matter, not too big to afford a gifted visit.", stat: "24.1K", caption: "followers. Right-sized for a gifted visit for two." },
+  { title: "Past collabs", body: "How their previous collabs actually performed.", stat: "2", caption: "brand collabs in the last 6 months, both above her average." },
+  { title: "Audience size", body: "Big enough to matter, not too big for a gifted collab.", stat: "24.1K", caption: "followers. Right-sized for a gifted product or visit." },
 ];
 
 function Item({ i, active, onActive }: { i: number; active: boolean; onActive: (i: number) => void }) {
@@ -62,7 +62,7 @@ export default function Checks() {
               7 checks before <span className="grad-text">you say yes</span>
             </>
           }
-          sub="We run them as soon as a creator applies. You get a clear answer, not a pile of stats."
+          sub="We run them as soon as a creator fills in your link, and you get a clear assessment."
         />
 
         <div className="mt-12 grid gap-10 lg:mt-20 lg:grid-cols-[1fr_1fr] lg:gap-16">
@@ -85,7 +85,7 @@ export default function Checks() {
                     </span>
                     <div className="leading-tight">
                       <div className="text-[17px] font-semibold">Mia Duarte</div>
-                      <div className="text-[13px] text-muted">@mia.eats.lisbon, food creator in Lisbon</div>
+                      <div className="text-[13px] text-muted">@mia.eats.la, food creator in Los Angeles</div>
                     </div>
                   </div>
 

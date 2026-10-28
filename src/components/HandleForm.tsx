@@ -114,10 +114,10 @@ export default function HandleForm({
       </form>
 
       <p
-        className={`mt-3.5 pl-2 text-[14px] transition-opacity duration-300 ${tone === "dark" ? "text-white/55" : "text-muted"} ${centerNote ? "text-center" : ""} ${open ? "opacity-0" : ""}`}
+        className={`mt-3.5 pl-2 text-[14px] font-medium transition-opacity duration-300 ${tone === "dark" ? "text-white/55" : "text-muted"} ${centerNote ? "text-center" : ""} ${open ? "opacity-0" : ""}`}
         aria-hidden={open || undefined}
       >
-        Totally free. 30 seconds to create.
+        Totally <span className="underline decoration-[1.5px] underline-offset-[3px]">free</span>. 30 seconds to create.
       </p>
 
       {/* "is this you?" */}
@@ -176,7 +176,7 @@ export function Avatar({ size }: { handle?: string; size: number }) {
   return (
     <span className="brand-grad grid shrink-0 place-items-center rounded-full p-[2px]" style={{ width: size, height: size }}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/img/ig/foundcoffee.jpg" alt="" className="h-full w-full rounded-full border-2 border-white object-cover" />
+      <img src="/img/ig/konacoffee.jpg" alt="" className="h-full w-full rounded-full border-2 border-white object-cover" />
     </span>
   );
 }

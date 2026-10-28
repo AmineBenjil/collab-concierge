@@ -28,5 +28,5 @@ function subscribe(l: () => void) {
 /* the business shown in the phone: the typed handle, or the demo café */
 export function usePhoneBrand() {
   const handle = useSyncExternalStore(subscribe, () => draft, () => "");
-  return handle ? { handle, name: displayName(handle) } : { handle: "foundcoffee", name: "Found Coffee" };
+  return handle ? { handle, name: displayName(handle) } : { handle: "konacoffee", name: "Kona Coffee" };
 }

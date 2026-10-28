@@ -89,7 +89,7 @@ export const CREATORS: Creator[] = [
       create: "Come in for a visit, film a Reel and a couple of Stories about the space. I love the light in there.",
       want: "A complimentary visit",
       payment: "None expected",
-      based: "Highland Park, 10 min away",
+      based: "Highland Park, Los Angeles",
       extra: "Weekday mornings work best. Happy to tag you in Stories too.",
     },
     review: [
@@ -128,7 +128,7 @@ export const CREATORS: Creator[] = [
       create: "Would love to do a Reel on your signature set and share it with my Studio City people.",
       want: "A complimentary visit",
       payment: "None expected",
-      based: "Studio City, 5 min away",
+      based: "Studio City, Los Angeles",
       extra: "Any afternoon. I usually post within a week.",
     },
     review: [
@@ -166,7 +166,7 @@ export const CREATORS: Creator[] = [
       create: "A girls night Reel plus a few Stories. I'd bring two friends and we'd book the full experience.",
       want: "An experience",
       payment: "None expected",
-      based: "Silver Lake, 15 min away",
+      based: "Silver Lake, Los Angeles",
       extra: "Thursday or Friday evenings. I'd bring two friends.",
     },
     review: [
@@ -230,7 +230,7 @@ export const CREATORS: Creator[] = [
     fit: "maybe",
     status: "new",
     requested: "2026-10-16",
-    summary: "Reel for a visit. Good content, but no Insights shared, so audience location is unknown.",
+    summary: "Reel for a bag of beans. Good content, but no Insights shared, so audience location is unknown.",
     verdict: "Remy's content fits, but we can't see where his audience lives yet.",
     bio: "Cinematic Reels about coffee, film and Echo Park. Moody on purpose.",
     engagement: "3.4%",
@@ -238,12 +238,12 @@ export const CREATORS: Creator[] = [
     age: "Unknown",
     gender: "Unknown",
     verticals: ["Echo Park", "film", "cinematic", "coffee"],
-    posts: ["/img/ig/roasters.jpg", "/img/ig/foundcoffee.jpg", "/img/creators/mirror.png", "/img/ig/cafe.jpg", "/img/creators/lp-16.png"],
+    posts: ["/img/ig/roasters.jpg", "/img/ig/konacoffee.jpg", "/img/creators/mirror.png", "/img/ig/cafe.jpg", "/img/creators/lp-16.png"],
     proposal: {
-      create: "One Reel, moody and cinematic, in exchange for a visit.",
-      want: "A complimentary visit",
+      create: "One Reel, moody and cinematic, brewing your beans at home.",
+      want: "A bag of beans shipped to me",
       payment: "None expected",
-      based: "Echo Park, 12 min away",
+      based: "Echo Park, Los Angeles",
       extra: "Flexible. I shoot on a mirrorless, not a phone.",
     },
     review: [
@@ -390,12 +390,12 @@ export const CREATORS: Creator[] = [
     age: "25 to 34",
     gender: "79% women",
     verticals: ["Los Feliz", "food", "brunch"],
-    posts: ["/img/ig/nata.jpg", "/img/ig/cafe.jpg", "/img/ig/foundcoffee.jpg", "/img/creators/lp-07.png", "/img/creators/fc-12.png"],
+    posts: ["/img/ig/nata.jpg", "/img/ig/cafe.jpg", "/img/ig/konacoffee.jpg", "/img/creators/lp-07.png", "/img/creators/fc-12.png"],
     proposal: {
       create: "A Reel about your new menu plus Stories from the visit.",
       want: "A complimentary visit",
       payment: "None expected",
-      based: "Los Feliz, 8 min away",
+      based: "Los Feliz, Los Angeles",
       extra: "Weekday lunch. Can turn the Reel around in 3 days.",
     },
     review: [

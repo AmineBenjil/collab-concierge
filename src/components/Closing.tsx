@@ -43,7 +43,7 @@ export default function Closing() {
               <div>
                 <Logo className="text-ink" />
                 <p className="mt-3 max-w-[280px] text-[14px] leading-relaxed text-ink-2">
-                  Collab Concierge is a Benable product for local businesses. Benable is where a million creators share what they love.
+                  Collab Concierge is a Benable product for brands and businesses. Benable is where a million creators share what they love.
                 </p>
               </div>
               {[

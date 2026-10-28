@@ -1,8 +1,9 @@
 "use client";
 
+import { RiVerifiedBadgeFill } from "@remixicon/react";
 import { motion } from "motion/react";
 import { FIT } from "./concierge/data";
-import Globe from "./Globe";
+import AudienceVenn from "./AudienceVenn";
 import InboxPhone from "./InboxPhone";
 import Reveal from "./Reveal";
 import { SectionHead } from "./ui";
@@ -10,10 +11,12 @@ import { SectionHead } from "./ui";
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 const WORTH = [
-  { who: "mia.eats.lisbon", img: "mia", post: "Brunch reel", ago: "2 weeks ago", views: "38K", pct: 0.92, fit: "strong" },
-  { who: "joao.films", img: "joao", post: "Café reel", ago: "last month", views: "12K", pct: 0.42, fit: "maybe" },
-  { who: "travel.with.jon", img: "roasters", post: "Dinner story", ago: "3 weeks ago", views: "900", pct: 0.06, fit: "no" },
+  { name: "Jon Reyes", who: "travel.with.jon", img: "roasters", post: "Dinner story", views: "900", fit: "no" },
+  { name: "Mia Duarte", who: "mia.eats.la", img: "mia", post: "Product reel", views: "38K", fit: "strong" },
+  { name: "Joey Park", who: "joey.films", img: "joao", post: "Café reel", views: "12K", fit: "maybe" },
 ] as const;
+// how far each card behind the front one sits above it
+const STACK_STEP = 50;
 
 export default function Problem() {
   return (
@@ -33,7 +36,7 @@ export default function Problem() {
           {/* what do they want */}
           <Reveal className="card relative overflow-hidden p-7 lg:col-span-2">
             <div className="dot-grid pointer-events-none absolute inset-0 opacity-60" />
-            <div className="relative grid gap-8 sm:grid-cols-[0.9fr_1.1fr] sm:items-center">
+            <div className="relative grid gap-8 sm:grid-cols-[0.9fr_1.1fr]">
               <div>
                 <span className="text-[13px] font-semibold text-violet">Question 1</span>
                 <h3 className="mt-2 text-[24px] sm:text-[28px]">What do they actually want?</h3>
@@ -42,13 +45,13 @@ export default function Problem() {
                 </p>
               </div>
               {/* the phone's top half rises out of the card's bottom edge, which crops the rest */}
-              <div className="relative -mb-7 h-[330px] sm:h-[380px]">
+              <div className="relative -mb-7 h-[300px] sm:-mt-7 sm:h-[calc(100%+28px)] sm:min-h-[300px]">
                 <motion.div
                   initial={{ y: 140 }}
                   whileInView={{ y: 0 }}
                   viewport={{ once: true, margin: "-60px" }}
                   transition={{ duration: 1.1, ease: EASE, delay: 0.15 }}
-                  className="absolute left-1/2 top-2 w-[250px] -translate-x-1/2 sm:top-8 sm:w-[290px]"
+                  className="absolute left-1/2 top-2 w-[250px] -translate-x-1/2 sm:top-10 sm:w-[270px]"
                 >
                   <InboxPhone />
                 </motion.div>
@@ -80,74 +83,68 @@ export default function Problem() {
             <p className="mt-6 text-[15px] leading-relaxed text-ink-2">Follower counts are easy to fake. We check who&rsquo;s actually behind the number.</p>
           </Reveal>
 
-          {/* local: the café on a globe, its followers popping up on other continents */}
+          {/* audience fit: your customers and their followers, overlapping (or not) */}
           <Reveal delay={0.04} className="card relative flex flex-col overflow-hidden p-7">
             <span className="text-[13px] font-semibold text-violet">Question 3</span>
-            <h3 className="mt-2 text-[24px] sm:text-[26px]">Is their audience local?</h3>
-            <p className="mt-3 text-[15px] leading-relaxed text-ink-2">A creator in your city can still have an audience on another continent. We look at the followers, not the bio.</p>
-            {/* the globe's top rises out of the card's bottom edge, which crops the rest */}
-            <div className="relative -mx-7 -mb-7 mt-6 min-h-[210px] flex-1">
-              <div className="absolute left-1/2 top-3 -translate-x-1/2">
-                <Globe />
-              </div>
+            <h3 className="mt-2 text-[24px] sm:text-[26px]">Is their audience a fit?</h3>
+            <p className="mt-3 text-[15px] leading-relaxed text-ink-2">The creator can be a great fit and their audience still miss. We look at the followers, not the bio.</p>
+            <div className="mt-6 flex flex-1 items-end">
+              <AudienceVenn />
             </div>
           </Reveal>
 
           {/* worth it */}
           <Reveal delay={0.12} className="card relative overflow-hidden p-7 lg:col-span-2">
-            <div className="grid gap-8 sm:grid-cols-[0.9fr_1.1fr]">
-              <div className="flex min-w-0 flex-col justify-center">
+            <div className="grid h-full gap-8 sm:grid-cols-[0.85fr_1.15fr]">
+              <div className="flex min-w-0 flex-col">
                 <span className="text-[13px] font-semibold text-violet">Question 4</span>
-                <h3 className="mt-2 text-[24px] sm:text-[28px]">Are they worth a free visit?</h3>
+                <h3 className="mt-2 text-[24px] sm:text-[28px]">Worth a free product or experience?</h3>
                 <p className="mt-3 text-[15px] leading-relaxed text-ink-2">
-                  A gifted brunch for two costs you real money. We look at how their last café collabs actually performed, so you know what you&rsquo;re getting.
+                  Every gifted product or visit costs you real money. We look at how their last collabs actually performed, so you know what you&rsquo;re getting.
                 </p>
               </div>
-              {/* same grey tray and white rows as the Concierge dashboard */}
-              <div className="flex min-w-0 flex-col gap-2 rounded-[20px] border-[0.5px] border-[#e3e3e3] bg-[#fafafa] p-[7.5px]">
-                <div className="flex items-baseline justify-between gap-3 px-2 pb-1 pt-1.5">
-                  <span className="whitespace-nowrap text-[13px] font-semibold text-[#1c1c1c]">Last café collab</span>
-                  <span className="whitespace-nowrap text-[12px] text-[#999]">
-                    <span className="sm:hidden">Within 15 km</span>
-                    <span className="hidden sm:inline">Views from within 15 km</span>
-                  </span>
-                </div>
-                {WORTH.map((r, i) => {
-                  const fit = FIT[r.fit];
-                  return (
-                    <div key={r.who} className="rounded-[14px] border-[0.5px] border-[#e3e3e3] bg-white p-[13.5px]">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex min-w-0 items-center gap-3">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={`/img/ig/${r.img}.jpg`} alt="" className="h-8 w-8 shrink-0 rounded-full border border-white object-cover drop-shadow-[0_4px_7px_rgba(0,0,0,0.08)]" />
-                          <div className="min-w-0">
-                            <div className="truncate text-[14px] font-semibold leading-[17px] text-black">{r.who}</div>
-                            <div className="mt-1 truncate text-[12px] leading-[15px] text-[#999]">
-                              {r.post}
-                              {/* phones keep just the post type so the line never truncates */}
-                              <span className="hidden sm:inline"> · {r.ago}</span>
+              {/* each creator's last collab, stacked on a lilac panel: the first in front, the rest tucked behind */}
+              <div className="relative flex min-h-[300px] min-w-0 items-center justify-center overflow-hidden rounded-[22px] bg-[linear-gradient(180deg,#f7f5ff_0%,#ebe5ff_55%,#dcd1fd_100%)] px-4 py-8 sm:px-6">
+                <div className="dot-grid pointer-events-none absolute inset-0 opacity-70" />
+                <div className="pointer-events-none absolute inset-x-8 bottom-6 h-24 rounded-full bg-[#8f6cf7]/35 blur-3xl" />
+                <div className="relative w-full max-w-[400px]" style={{ paddingTop: (WORTH.length - 1) * STACK_STEP }}>
+                  {WORTH.map((r, i) => ({ r, i }))
+                    .reverse()
+                    .map(({ r, i }) => {
+                      const fit = FIT[r.fit];
+                      const front = i === 0;
+                      return (
+                        <motion.div
+                          key={r.who}
+                          className={`${front ? "relative" : "absolute inset-x-0 bottom-0"} flex items-center gap-3 rounded-[22px] px-4 py-3.5 ${
+                            front
+                              ? "bg-white shadow-[0_24px_40px_-18px_rgba(107,78,240,0.55),0_0_0_0.5px_rgba(22,26,53,0.06)]"
+                              : "bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(255,255,255,0.6))] shadow-[0_10px_24px_-16px_rgba(107,78,240,0.45),0_0_0_0.5px_rgba(255,255,255,0.9)] backdrop-blur-md"
+                          }`}
+                          style={{ originY: 1, zIndex: WORTH.length - i }}
+                          initial={{ opacity: 0, y: front ? 18 : 0, scale: front ? 1 : 0.9 }}
+                          whileInView={{ opacity: 1, y: -i * STACK_STEP, scale: 1 - i * 0.09 }}
+                          viewport={{ once: true }}
+                          transition={{ duration: 0.8, ease: EASE, delay: front ? 0.15 : 0.45 + i * 0.12 }}
+                        >
+                          <div className={`flex min-w-0 flex-1 items-center gap-3 ${front ? "" : i === 1 ? "opacity-60" : "opacity-40"}`}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={`/img/ig/${r.img}.jpg`} alt="" className="h-10 w-10 shrink-0 rounded-full border border-white object-cover drop-shadow-[0_4px_7px_rgba(0,0,0,0.08)]" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1 text-[14px] font-semibold leading-[17px] text-black">
+                                <span className="truncate">{r.name}</span>
+                                <RiVerifiedBadgeFill size={15} color="#3897f0" aria-label="Verified" className="shrink-0" />
+                              </div>
+                              <div className="mt-1 truncate text-[12px] leading-[15px] text-[#999]">
+                                {r.post} · <span className="font-semibold text-[#1c1c1c]">{r.views}</span> views
+                              </div>
                             </div>
+                            <span className={`inline-flex h-[23px] shrink-0 items-center rounded-[6px] border-[0.5px] px-[9.5px] text-[12px] font-medium leading-none whitespace-nowrap ${fit.tag}`}>{fit.label}</span>
                           </div>
-                        </div>
-                        <span className={`inline-flex h-[23px] shrink-0 items-center rounded-[6px] border-[0.5px] px-[9.5px] text-[12px] font-medium leading-none whitespace-nowrap ${fit.tag}`}>{fit.label}</span>
-                      </div>
-                      <div className="mt-3 flex items-center gap-3">
-                        <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#eef0f6]">
-                          <motion.div
-                            className={`h-full rounded-full ${fit.bar}`}
-                            initial={{ width: 0 }}
-                            whileInView={{ width: `${Math.max(r.pct * 100, 3)}%` }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 1.2, ease: EASE, delay: 0.3 + i * 0.15 }}
-                          />
-                        </div>
-                        <span className="w-[74px] shrink-0 text-right text-[12px] tabular-nums text-[#717171]">
-                          <span className="font-semibold text-[#1c1c1c]">{r.views}</span> views
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
+                        </motion.div>
+                      );
+                    })}
+                </div>
               </div>
             </div>
           </Reveal>

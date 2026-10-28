@@ -8,10 +8,10 @@ import { SectionHead } from "./ui";
 
 const ITEMS = [
   { q: "Does the creator need a Benable account?", a: "No. They open your link, answer a few questions and add their Instagram. If they already use Benable, we recognise them and skip the typing." },
-  { q: "What happens after I say yes?", a: "We tell the creator it's a yes, share the times you gave us and what they get, and remind them what they agreed to post. You just show up and host." },
+  { q: "What happens after I say yes?", a: "We tell the creator it's a yes, share what they get and the details you gave us, and remind them what they agreed to post. You just send the product or host the visit." },
   { q: "And if I say no?", a: "We decline for you, kindly and without the reason. The creator never sees the vetting, and you never have to write the awkward DM." },
-  { q: "How do you check where their audience is?", a: "We look at their followers, not their bio. A creator in your city with an audience somewhere else is a pass for a free visit, and we'll say so." },
-  { q: "What does it cost?", a: "Free for local businesses while we roll out. If you later want us to run paid collabs end to end, we'll quote that separately." },
+  { q: "How do you check where their audience is?", a: "We look at their followers, not their bio. A creator whose followers live outside your market is a pass for a free product or visit, and we'll say so." },
+  { q: "What does it cost?", a: "Free while we roll out. If you later want us to run paid collabs end to end, we'll quote that separately." },
 ];
 
 export default function FAQ() {
@@ -23,7 +23,7 @@ export default function FAQ() {
           label="FAQ"
           title={
             <>
-              Questions <span className="grad-text">businesses</span> ask us
+              Questions businesses <span className="grad-text">ask us</span>
             </>
           }
         />

@@ -1,7 +1,6 @@
 import BrandStrip from "@/components/BrandStrip";
 import Checks from "@/components/Checks";
 import Closing from "@/components/Closing";
-import Community from "@/components/Community";
 import Creators from "@/components/Creators";
 import FAQ from "@/components/FAQ";
 import Hero from "@/components/Hero";
@@ -26,7 +25,6 @@ export default function Home() {
         <Checks />
         <Creators />
         <Ranking />
-        <Community />
         <Pricing />
         <FAQ />
       </main>

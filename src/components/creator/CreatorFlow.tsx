@@ -58,15 +58,15 @@ const DEMO = { name: "Nia Carter", followers: "33.9K", avatar: "/img/dash/nia.jp
 const SCRIPT: Partial<Record<Step, [field: keyof Draft, value: string][]>> = {
   socials: [["handle", "niacarter"]],
   collab: [
-    ["create", "A Reel and two Stories about your morning pour-overs and the pastries. Happy to film a tasting too."],
-    ["want", "A complimentary visit for two. No payment needed."],
+    ["create", "A Reel and two Stories brewing your beans at home, with a code for my followers."],
+    ["want", "A bag of beans to try. No payment needed."],
   ],
   payment: [
     ["paid", "yes"],
     ["range", "$100 to $250"],
     ["paid", "no"],
   ],
-  based: [["based", "Highland Park, 10 min away"]],
+  based: [["based", "Los Angeles, CA"]],
   contact: [
     ["first", "Nia"],
     ["last", "Carter"],
@@ -344,7 +344,7 @@ export default function CreatorFlow({ handle }: { handle: string }) {
       {/* desktop: the café's own colours, blurred far back, so the card feels like theirs */}
       <div className="pointer-events-none fixed inset-0 hidden overflow-hidden sm:block" aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/img/ig/foundcoffee.jpg" alt="" className="h-full w-full scale-125 object-cover opacity-35 blur-[90px]" />
+        <img src="/img/ig/konacoffee.jpg" alt="" className="h-full w-full scale-125 object-cover opacity-35 blur-[90px]" />
         <div className="absolute inset-0 bg-[#f4f3f8]/60" />
       </div>
 
@@ -399,7 +399,7 @@ export default function CreatorFlow({ handle }: { handle: string }) {
                   {step === "payment" && <Payment d={d} set={set} />}
                   {step === "audience" && <Audience name={name} handle={cleanHandle(d.handle)} connecting={connecting} connected={d.insights === "connected"} />}
                   {step === "manual" && <Manual name={name} shots={shots} onAdd={addShot} />}
-                  {step === "based" && <Based d={d} set={set} name={name} />}
+                  {step === "based" && <Based d={d} set={set} />}
                   {step === "contact" && <Contact d={d} set={set} />}
                   {step === "custom" &&
                     (question ? (
@@ -529,7 +529,7 @@ function Business({ name }: { name: string }) {
     <div className="flex flex-col items-center">
       <span className="relative mb-[-18px] size-20 shrink-0 rounded-full shadow-[0_1px_14px_rgba(0,0,0,0.25)] outline outline-[1.5px] outline-white/50">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/img/ig/foundcoffee.jpg" alt="" className="size-full rounded-full object-cover" />
+        <img src="/img/ig/konacoffee.jpg" alt="" className="size-full rounded-full object-cover" />
       </span>
       <span className="relative max-w-full rounded-full border border-transparent px-4 py-1 [background:linear-gradient(#fff,#fff)_padding-box,var(--brand-grad)_border-box]">
         <span className="block truncate font-display text-[20px] font-medium leading-[normal] text-[#1c1c1c]">{name}</span>
@@ -548,7 +548,7 @@ function Bubble({ children }: { children: ReactNode }) {
   return (
     <div className="flex items-end gap-2.5 px-5">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/img/ig/foundcoffee.jpg" alt="" width={32} height={32} className="size-8 shrink-0 rounded-full object-cover" />
+      <img src="/img/ig/konacoffee.jpg" alt="" width={32} height={32} className="size-8 shrink-0 rounded-full object-cover" />
       <p className="min-w-0 flex-1 rounded-[16px] rounded-bl-[4px] bg-[#eef2f5] py-2.5 pl-2.5 pr-[11px] font-[-apple-system,'SF_Pro','SF_Pro_Text','Helvetica_Neue',Inter,sans-serif] text-[14px] leading-[16.7px] tracking-[-0.3px] text-[#0f1316]">
         {children}
       </p>
@@ -801,17 +801,17 @@ function Manual({ name, shots, onAdd }: { name: string; shots: (string | null)[]
   );
 }
 
-function Based({ d, set, name }: Bind & { name: string }) {
+function Based({ d, set }: Bind) {
   const id = useId();
   return (
     <>
-      <Title sub={`Where you'd be coming from. A neighborhood is enough for ${name} to see how far it is.`}>Address or neighborhood</Title>
+      <Title sub="It helps to know for this collab.">Where are you based?</Title>
       <label htmlFor={id} className="sr-only">
-        Your city or neighborhood
+        Where you&apos;re based
       </label>
       <div className={`${field} mt-7 flex items-center gap-2.5 focus-within:bg-white focus-within:shadow-[inset_0_0_0_2px_#5035e3]`}>
         <RiMapPin2Line size={19} className="shrink-0 text-muted" aria-hidden="true" />
-        <input id={id} autoFocus={useContext(AutoFocus)} value={d.based} onChange={(e) => set("based", e.target.value)} placeholder="Your city or neighborhood" autoComplete="address-level2" className="h-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted" />
+        <input id={id} autoFocus={useContext(AutoFocus)} value={d.based} onChange={(e) => set("based", e.target.value)} placeholder="City, state or country" autoComplete="address-level2" className="h-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted" />
       </div>
     </>
   );

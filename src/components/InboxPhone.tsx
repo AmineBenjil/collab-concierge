@@ -16,18 +16,18 @@ type Dm = { img: string; name: string; preview: string; time: string; unread?: b
 
 const START: Dm[] = [
   { img: "mia", name: "Mia Duarte", preview: "gifted visit for me + 1? 🙏", time: "1h" },
-  { img: "roasters", name: "Jon Reyes", preview: "free dinner for 4 + €150?", time: "3h" },
-  { img: "ana", name: "Ana Ribeiro", preview: "can I come film this week?", time: "5h" },
-  { img: "joao", name: "João Pereira", preview: "hii love your feed 💕 collab?", time: "8h" },
+  { img: "roasters", name: "Jon Reyes", preview: "free product + $150 for a reel?", time: "3h" },
+  { img: "ana", name: "Ana Rivera", preview: "can I come film this week?", time: "5h" },
+  { img: "joao", name: "Joey Park", preview: "hii love your feed 💕 collab?", time: "8h" },
 ];
 
 const ARRIVING: Dm[] = [
-  { img: "clara", name: "Clara Mendes", preview: "would love to feature you 🥐 collab?", time: "now" },
-  { img: "tiago", name: "Tiago Alves", preview: "do you do paid collabs?", time: "now" },
-  { img: "ines", name: "Inês Martins", preview: "can I bring my camera this sat? 🎥", time: "now" },
+  { img: "clara", name: "Clara Mendez", preview: "would love to feature you 🥐 collab?", time: "now" },
+  { img: "tiago", name: "Theo Alvarez", preview: "do you do paid collabs?", time: "now" },
+  { img: "ines", name: "Ivy Martin", preview: "can I bring my camera this sat? 🎥", time: "now" },
   { img: "rafa", name: "Rafa Costa", preview: "let's work together!! dm me", time: "now" },
-  { img: "beatriz", name: "Beatriz Lopes", preview: "brunch for 2 for a reel? 🥂", time: "now" },
-  { img: "cafe", name: "Lisbon Bites", preview: "food page here (80K) 👀 collab?", time: "now" },
+  { img: "beatriz", name: "Bea Lopez", preview: "PR box for a review? 📦", time: "now" },
+  { img: "cafe", name: "LA Bites", preview: "food page here (80K) 👀 collab?", time: "now" },
 ].map((d) => ({ ...d, unread: true }));
 
 const FIRST_DM = 1600; // after the phone has risen into place
@@ -60,7 +60,7 @@ export default function InboxPhone({ className = "" }: { className?: string }) {
   const shown = reduced ? ARRIVING.length : count;
   return (
     <div ref={ref} className={className}>
-      <PhoneFrame label="An Instagram inbox filling up with collab DMs: “collab?”, “do you do paid collabs?”, “brunch for 2 for a reel?”, each one vague about what the creator actually wants.">
+      <PhoneFrame label="An Instagram inbox filling up with collab DMs: “collab?”, “do you do paid collabs?”, “PR box for a review?”, each one vague about what the creator actually wants.">
         <AnimatePresence initial={false}>
           <motion.div
             key={`inbox-${run}`}

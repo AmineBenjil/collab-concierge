@@ -22,33 +22,33 @@ import { BrandIcon } from "./Logo";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 // how long each step stays on screen; the vetting step moves on while its rules popup is open
-const STEP_MS = [5200, 5600, 8000, 6000];
+const STEP_MS = [3800, 4000, 6200, 4600];
 
-const REPLY = "Thanks for reaching out! We handle collab requests here, takes a couple minutes and we'll get back to you: benable.com/c/foundcoffee";
+const REPLY = "Thanks for reaching out! We handle collab requests here, takes a couple minutes and we'll get back to you: benable.com/c/konacoffee";
 
 const STEPS: { title: string; who: string; body: string; Icon: RemixiconComponentType }[] = [
   {
-    title: "You paste",
+    title: "You share",
     who: "You, 10 seconds",
-    body: "One ready-made reply for every collab DM.",
+    body: "Answer any collab DM with your link. Same reply every time.",
     Icon: RiClipboardLine,
   },
   {
-    title: "They apply",
+    title: "They fill",
     who: "The creator, 2 minutes",
-    body: "What they want, their idea, when they're free.",
+    body: "Creators say what they're asking for and what they'll post in return.",
     Icon: RiFileList3Line,
   },
   {
     title: "We vet",
     who: "Automated 7-point analysis",
-    body: "Seven checks on who's really behind the account.",
+    body: "We run 7 checks on the account and the people following it.",
     Icon: RiShieldCheckLine,
   },
   {
     title: "You decide",
     who: "You, one tap",
-    body: "A one-line verdict in your dashboard. Yes or no.",
+    body: "A clear verdict lands in your dashboard. You tap yes or no.",
     Icon: RiDashboardLine,
   },
 ];
@@ -69,10 +69,10 @@ export default function HowItWorks() {
           label="How it works"
           title={
             <>
-              You paste. They apply. We vet. <span className="grad-text">You decide.</span>
+              You share a link. They fill it in. We vet. <span className="grad-text">You decide.</span>
             </>
           }
-          sub="Your part takes about ten seconds. Everything in between is on us."
+          sub="Your part takes about 10 seconds. We do all the tedious work."
         />
 
         <div ref={ref} className="mt-16">
@@ -113,7 +113,7 @@ export default function HowItWorks() {
                 initial={{ opacity: 0, y: 16, filter: "blur(6px)" }}
                 animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
                 exit={{ opacity: 0, y: -10, filter: "blur(6px)" }}
-                transition={{ duration: 0.5, ease: EASE }}
+                transition={{ duration: 0.28, ease: EASE }}
               >
                 {active === 0 && <PasteStage />}
                 {active === 1 && <ApplyStage />}
@@ -164,7 +164,7 @@ function PasteStage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/img/ig/mia.jpg" alt="" className="h-8 w-8 rounded-full object-cover" />
           <div className="text-[13px] leading-tight">
-            <div className="font-semibold">mia.eats.lisbon</div>
+            <div className="font-semibold">mia.eats.la</div>
             <div className="text-muted">Instagram</div>
           </div>
         </div>
@@ -197,12 +197,13 @@ function ApplyStage() {
   return (
     <div className="w-full max-w-[380px] rounded-[22px] border border-line bg-white p-5 text-[13px] shadow-[0_30px_60px_-30px_rgba(40,30,110,0.35)]">
       <div className="flex items-center gap-2 text-[12px] text-muted">
-        <BrandIcon size={16} /> benable.com/c/foundcoffee
+        <BrandIcon size={16} /> benable.com/c/konacoffee
       </div>
-      <div className="display mt-2 text-[21px]">Collab with Found Coffee</div>
+      <div className="display mt-2 text-[21px]">Collab with Kona Coffee</div>
       <div className="mt-4 space-y-3.5">
         <Field label="What are you hoping for?">
-          <Chip on>Gifted visit</Chip>
+          <Chip on>Gifted product</Chip>
+          <Chip>Visit</Chip>
           <Chip>Paid</Chip>
         </Field>
         <Field label="What would you post?">
@@ -211,10 +212,10 @@ function ApplyStage() {
           <Chip>TikTok</Chip>
         </Field>
         <Field label="Your idea">
-          <div className="rounded-xl bg-[#f4f5f9] px-3 py-2 text-ink-2">A slow-morning reel: oat flat white, pastel de nata, window seat.</div>
+          <div className="rounded-xl bg-[#f4f5f9] px-3 py-2 text-ink-2">A slow-morning reel brewing your Kona beans at home, with a code for my followers.</div>
         </Field>
-        <Field label="When are you free?">
-          <div className="rounded-xl bg-[#f4f5f9] px-3 py-2 text-ink-2">Weekday mornings</div>
+        <Field label="Where's your audience?">
+          <div className="rounded-xl bg-[#f4f5f9] px-3 py-2 text-ink-2">Mostly LA, ages 22 to 34</div>
         </Field>
       </div>
     </div>
@@ -237,9 +238,9 @@ function Chip({ on, children }: { on?: boolean; children: ReactNode }) {
 const CHECKS: { title: string; hint: string; value: string; pill?: boolean }[] = [
   { title: "Fake followers", hint: "inflated or bought numbers", value: "None found", pill: true },
   { title: "Content quality", hint: "their last 24 posts", value: "Strong", pill: true },
-  { title: "Audience location", hint: "where their followers live", value: "91% Lisbon" },
+  { title: "Audience location", hint: "where their followers live", value: "84% US" },
   { title: "Red flags", hint: "anything that could reflect badly on you", value: "None in 24 posts", pill: true },
-  { title: "Successful collabs", hint: "evidence they delivered before", value: "2 local cafés" },
+  { title: "Successful collabs", hint: "evidence they delivered before", value: "3 brands" },
   { title: "True engagement rate", hint: "real likes and comments, not bought", value: "6.4%" },
   { title: "Audience size", hint: "followers across platforms", value: "24.1K" },
 ];
@@ -264,12 +265,12 @@ const RULES: { title: string; Icon: RemixiconComponentType }[] = [
 ];
 
 // timeline for one loop of the vetting step, in seconds after it starts
-const TICK = (i: number) => 0.35 + i * 0.26; // the seven checks
-const CHECKS_DONE = TICK(CHECKS.length - 1) + 0.35;
-const PRESS = CHECKS_DONE + 0.7; // the + gets clicked
+const TICK = (i: number) => 0.25 + i * 0.18; // the seven checks
+const CHECKS_DONE = TICK(CHECKS.length - 1) + 0.25;
+const PRESS = CHECKS_DONE + 0.4; // the + gets clicked
 const OPEN = PRESS + 0.25; // card slides left, rules pop up
-const CLOSE = OPEN + 5;
-const RESTART = CLOSE + 1.0;
+const CLOSE = OPEN + 3.5;
+const RESTART = CLOSE + 0.7;
 
 // side-by-side layout (lg+): card, gap with the thread, rules popup
 const CARD_W = 480;
@@ -373,7 +374,7 @@ function VetLoop() {
       style={{ width: lg ? POP_W : "min(100%, 400px)", transformOrigin: lg ? "left center" : "center bottom", pointerEvents: open ? "auto" : "none" }}
       initial={false}
       animate={open ? { opacity: 1, x: 0, y: 0, scale: 1 } : { opacity: 0, x: lg ? -28 : 0, y: lg ? 0 : 18, scale: 0.94 }}
-      transition={open ? { duration: 0.6, ease: EASE, delay: 0.22 } : { duration: 0.35, ease: EASE }}
+      transition={open ? { duration: 0.5, ease: EASE, delay: 0.15 } : { duration: 0.3, ease: EASE }}
       aria-hidden={!open}
     >
       <div ref={head} className="flex items-center gap-3 bg-[#7a5cfa] px-4 py-3.5 text-white sm:px-5">
@@ -400,14 +401,14 @@ function VetLoop() {
         style={{ width: lg ? CARD_W : undefined, maxWidth: lg ? undefined : 480 }}
         initial={false}
         animate={lg ? { x: open ? 0 : SHIFT } : { x: 0, opacity: open ? 0.45 : 1, scale: open ? 0.96 : 1 }}
-        transition={{ duration: 0.8, ease: EASE, delay: open ? 0 : 0.15 }}
+        transition={{ duration: 0.6, ease: EASE, delay: open ? 0 : 0.1 }}
       >
         <div className="overflow-hidden rounded-[24px] bg-white shadow-[0_30px_70px_-36px_rgba(40,30,110,0.45),0_0_0_1px_rgba(22,26,53,0.05)]">
           <div className="flex items-center gap-3 px-4 py-3 sm:px-5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/img/ig/mia.jpg" alt="" className="h-8 w-8 rounded-full object-cover" />
             <p className="min-w-0 flex-1 truncate text-[14px] text-muted">
-              Example: <span className="font-semibold text-ink">Mia Duarte</span>, mia.eats.lisbon
+              Example: <span className="font-semibold text-ink">Mia Duarte</span>, mia.eats.la
             </p>
             <span className={`relative grid h-[26px] shrink-0 place-items-center overflow-hidden rounded-full px-2.5 text-[12px] font-semibold transition-colors duration-500 ${checked ? "bg-[#e5f5ee] text-[#178a60]" : "bg-[#f1f0fb] text-violet"} ${lg ? "mr-4" : ""}`}>
               <AnimatePresence mode="wait" initial={false}>
@@ -480,7 +481,7 @@ function VetLoop() {
             strokeLinecap="round"
             initial={false}
             animate={{ pathLength: open ? 1 : 0, opacity: open ? 1 : 0 }}
-            transition={open ? { duration: 0.6, ease: EASE, delay: 0.55 } : { duration: 0.3, ease: EASE }}
+            transition={open ? { duration: 0.5, ease: EASE, delay: 0.4 } : { duration: 0.3, ease: EASE }}
           />
           <motion.circle
             cx={thread.ex}
@@ -489,7 +490,7 @@ function VetLoop() {
             fill="#7a5cfa"
             initial={false}
             animate={{ opacity: open ? 1 : 0, scale: open ? 1 : 0.4 }}
-            transition={{ duration: 0.3, delay: open ? 1.05 : 0 }}
+            transition={{ duration: 0.3, delay: open ? 0.85 : 0 }}
           />
         </svg>
       )}
@@ -520,6 +521,7 @@ const FIT: Record<Fit, { label: string; solid: string; pale: string; noteBg: str
   strong: { label: "Strong fit", solid: "#3ca44f", pale: "#d3ecd2", noteBg: "#f2fef7", noteText: "#3f5c3a", angle: 8 },
 };
 
+// the first card sits in front; the next fans out to the right, the last to the left
 const VERDICTS: { name: string; handle: string; reach: string; img: string; fit: Fit; ask: string; note: string }[] = [
   {
     name: "Jordan Blake",
@@ -527,8 +529,17 @@ const VERDICTS: { name: string; handle: string; reach: string; img: string; fit:
     reach: "41.2K",
     img: "/img/decide/jordan.jpg",
     fit: "no",
-    ask: "Paid Reel for €400. 12% Lisbon audience, and most of the likes look bought.",
-    note: "Jordan doesn't look like a fit. Most followers live outside Lisbon and engagement looks inflated.",
+    ask: "Paid Reel for $400. 12% US audience, and most of the likes look bought.",
+    note: "Jordan doesn't look like a fit. Most followers live outside the US and engagement looks inflated.",
+  },
+  {
+    name: "Mia Duarte",
+    handle: "@mia.eats.la",
+    reach: "24.1K",
+    img: "/img/ig/mia.jpg",
+    fit: "strong",
+    ask: "Gifted bag of beans for a Reel and two Stories. 84% US audience, strong content.",
+    note: "Mia looks like a strong fit, with a real US audience and clean, consistent content.",
   },
   {
     name: "Rafa Costa",
@@ -536,17 +547,8 @@ const VERDICTS: { name: string; handle: string; reach: string; img: string; fit:
     reach: "8.9K",
     img: "/img/ig/rafa.jpg",
     fit: "maybe",
-    ask: "Gifted brunch for two, one Reel. Local audience, but only a few posts so far.",
-    note: "Rafa could work. The audience is local, there's just not much to judge yet.",
-  },
-  {
-    name: "Mia Duarte",
-    handle: "@mia.eats.lisbon",
-    reach: "24.1K",
-    img: "/img/ig/mia.jpg",
-    fit: "strong",
-    ask: "Gifted visit for a Reel and two Stories. 91% Lisbon audience, strong content.",
-    note: "Mia looks like a strong fit, with a real local audience and clean, consistent content.",
+    ask: "Gifted product for one Reel. The right audience, but only a few posts so far.",
+    note: "Rafa could work. The audience fits, there's just not much to judge yet.",
   },
 ];
 
@@ -567,7 +569,7 @@ function Gauge({ fit, live }: { fit: Fit; live: boolean }) {
   // the needle swings in from straight up to its reading
   const angle = useMotionValue(live ? 90 : FIT[fit].angle);
   useEffect(() => {
-    const a = animate(angle, FIT[fit].angle, { type: "spring", stiffness: 90, damping: 13, delay: 0.45 });
+    const a = animate(angle, FIT[fit].angle, { type: "spring", stiffness: 90, damping: 13, delay: 0.25 });
     return () => a.stop();
   }, [angle, fit]);
   const x2 = useTransform(angle, (a) => G.cx + 30 * Math.cos((a * Math.PI) / 180));
@@ -654,14 +656,14 @@ function DecideStage() {
               style={{ originY: 0 }}
               initial={{ x: 0, y: 12 - i * 12, scale: 0.95 - i * 0.05 }}
               animate={{ x: `${side * 13}%`, y: 40, scale: 0.93 }}
-              transition={{ duration: 0.9, ease: EASE, delay: 1 + i * 0.08 }}
+              transition={{ duration: 0.7, ease: EASE, delay: 0.5 + i * 0.08 }}
             >
               {/* tilt from the bottom edge, like a hand of cards */}
               <motion.div
                 style={{ originY: 1 }}
                 initial={{ rotate: 0 }}
                 animate={{ rotate: side * 3.5 }}
-                transition={{ duration: 0.9, ease: EASE, delay: 1 + i * 0.08 }}
+                transition={{ duration: 0.7, ease: EASE, delay: 0.5 + i * 0.08 }}
               >
                 <VerdictCard v={v} live={false} />
               </motion.div>

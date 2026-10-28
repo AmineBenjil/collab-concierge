@@ -32,7 +32,7 @@ export default function PreviewDevice({ handle, draftKey }: { handle: string; dr
       {/* the café's own colours, blurred far back */}
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/img/ig/foundcoffee.jpg" alt="" className="h-full w-full scale-125 object-cover opacity-35 blur-[90px]" />
+        <img src="/img/ig/konacoffee.jpg" alt="" className="h-full w-full scale-125 object-cover opacity-35 blur-[90px]" />
         <div className="absolute inset-0 bg-[#f4f3f8]/60" />
       </div>
 

@@ -59,7 +59,7 @@ type State = {
   touch: Touch;
 };
 
-const OPENING_MSG: Msg = { id: "a", from: "them", text: "hiii!! obsessed with your place 😍 i'm a Lisbon food creator (24.1K) and would LOVE to collab. gifted visit for a reel + 3 stories? 💜" };
+const OPENING_MSG: Msg = { id: "a", from: "them", text: "hiii!! obsessed with your place 😍 i'm an LA food creator (24.1K) and would LOVE to collab. gifted visit for a reel + 3 stories? 💜" };
 const REPLY_TEXT = "Thanks for reaching out! We handle collab requests here, takes a couple minutes and we'll get back to you";
 const reply = (handle: string) => `${REPLY_TEXT} benable.com/c/${handle}`;
 const REPLY_MSG: Msg = { id: "c", from: "me", text: REPLY_TEXT, link: true };
@@ -172,7 +172,7 @@ export default function Phone({ className = "" }: { className?: string }) {
   return (
     <PhoneFrame
       className={className}
-      label="Found Coffee's Instagram DMs. A creator named Mia asks for a collab, the café pastes its Benable link, Mia fills it in, and Collab Concierge reports 18 collab requests reviewed and fully vetted."
+      label="Kona Coffee's Instagram DMs. A creator named Mia asks for a collab, the café pastes its Benable link, Mia fills it in, and Collab Concierge reports 18 collab requests reviewed and fully vetted."
     >
           {/* loop reset: the finished thread fades out over a fresh, empty one */}
           <AnimatePresence initial={false}>
@@ -395,7 +395,7 @@ function Thread({ state }: { state: State }) {
                 <div className="flex w-full flex-col items-center gap-[8px] text-center">
                   <span className="text-[18px] font-bold tracking-[-1px]">Mia Duarte</span>
                   <div className="flex flex-col gap-[3px] text-[14px] tracking-[-0.14px]" style={{ color: C.grey }}>
-                    <span>mia.eats.lisbon</span>
+                    <span>mia.eats.la</span>
                     <span>24.1K followers · 318 posts</span>
                     <span>You don&rsquo;t follow each other on Instagram</span>
                   </div>

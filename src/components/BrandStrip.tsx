@@ -10,7 +10,6 @@
 type Logo = { src: string; alt: string; w: number; h: number };
 
 const LOGOS: Logo[] = [
-  { src: "amazon", alt: "Amazon", w: 88.5, h: 26.7 },
   { src: "nike", alt: "Nike", w: 85.8, h: 30.8 },
   { src: "lego", alt: "LEGO", w: 38.2, h: 38 },
   { src: "ulta-beauty", alt: "Ulta Beauty", w: 80.8, h: 32.7 },
@@ -24,9 +23,7 @@ const LOGOS: Logo[] = [
   { src: "etsy", alt: "Etsy", w: 73.9, h: 35.8 },
   { src: "the-north-face", alt: "The North Face", w: 68.5, h: 31.8 },
   { src: "benefit", alt: "Benefit Cosmetics", w: 89.5, h: 29.6 },
-  { src: "dicks-sporting-goods", alt: "Dick's Sporting Goods", w: 63.9, h: 32.2 },
   { src: "warby-parker", alt: "Warby Parker", w: 136, h: 10.7 },
-  { src: "kayak", alt: "Kayak", w: 96.8, h: 18.6 },
   { src: "crocs", alt: "Crocs", w: 106, h: 20.1 },
   { src: "disney-store", alt: "Disney Store", w: 97.5, h: 27.1 },
   { src: "levis", alt: "Levi's", w: 69.4, h: 28.3 },

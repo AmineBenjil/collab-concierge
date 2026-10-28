@@ -504,7 +504,7 @@ function QuestionEditor({
                 value={q.title}
                 maxLength={120}
                 onChange={(e) => set({ title: e.target.value })}
-                placeholder="e.g. Which days can you come in?"
+                placeholder="e.g. When could you post?"
                 className="block h-[50px] w-full bg-transparent px-4 text-[16px] font-semibold text-ink outline-none placeholder:font-normal placeholder:text-muted"
               />
               <div className="mx-4 h-px bg-[#ececf1]" />
