@@ -98,9 +98,14 @@ export default function Pricing() {
   const ref = useRef<HTMLElement>(null);
   const seen = useInView(ref, { once: true, amount: 0.4 });
   const reduce = useReducedMotion() ?? false;
+  // cacheComponents keeps this page alive in a hidden <Activity> while you're elsewhere, and React re-runs
+  // effects when it's shown again; the ref survives that, so coming back via the logo doesn't rain confetti twice
+  const rained = useRef(false);
 
   useEffect(() => {
-    if (seen && !reduce) confetti();
+    if (!seen || reduce || rained.current) return;
+    rained.current = true;
+    confetti();
   }, [seen, reduce]);
 
   return (
