@@ -508,12 +508,15 @@ function Opener({ name, welcome, onStart, hint = false }: { name: string; welcom
 
 /* ---------- the opener and thank-you screens share these, built to their Figma frames ---------- */
 
-/* the café's photo, fading to white at the bottom */
+/* the same Benable cover for every business (their own photo sits on top as the avatar): the soft brand
+   gradient from Figma (Design Labs 15432:46578, also the hero's) with faint violet doodles, fading to white */
 function Cover({ height, top }: { height: number; top: number }) {
   return (
     <div className="pointer-events-none absolute inset-x-0 overflow-hidden sm:rounded-t-[32px]" style={{ top, height }} aria-hidden="true">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/img/creator/cover.png" alt="" className="absolute inset-0 h-full w-full object-cover" />
+      <img src="/img/hero-v2-bg.png" alt="" className="absolute inset-0 h-full w-full object-cover" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/img/creator/pattern-lines.png" alt="" className="absolute inset-0 h-full w-full object-cover object-top opacity-40" />
       <div className="absolute inset-0 bg-[linear-gradient(to_top,#fff,rgba(255,255,255,0))]" />
     </div>
   );
