@@ -17,7 +17,7 @@ export default function Share() {
   const reply = `Thanks for reaching out! We handle collab requests here: ${link}. Takes a couple minutes and we'll get back to you.`;
 
   return (
-    <main className="relative mx-auto w-full max-w-[600px] px-5 pb-24 pt-[112px] sm:pt-[140px]">
+    <main className="relative mx-auto w-full max-w-[600px] px-5 pb-24 pt-[96px] sm:pt-[112px]">
       <Rise i={0}>
         {/* the same title, spacing and alignment as the Requests page */}
         <h1 className="dash-title">
@@ -43,7 +43,7 @@ export default function Share() {
             </div>
             <a href={`https://instagram.com/${encodeURIComponent(handle)}`} target="_blank" rel="noopener" aria-label={`Open ${name} on Instagram`} className="shrink-0 transition-opacity hover:opacity-80">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/img/instagram.svg" alt="" width={24} height={24} />
+              <img src="/img/instagram-logo.svg" alt="" width={32} height={32} className="block size-8" />
             </a>
           </div>
 

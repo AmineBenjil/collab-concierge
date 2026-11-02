@@ -5,13 +5,18 @@ import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { useControls, type HeroBg } from "./controls";
+import { useControls, type AddressAsk, type HeroBg } from "./controls";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 const HERO_OPTIONS: { value: HeroBg; label: string; hint: string }[] = [
   { value: "v1", label: "V1", hint: "Night" },
   { value: "v2", label: "V2", hint: "Light grid" },
+];
+
+const ADDRESS_OPTIONS: { value: AddressAsk; label: string; hint: string }[] = [
+  { value: "local", label: "Local spot", hint: "City or area" },
+  { value: "shipping", label: "Ships products", hint: "Full address" },
 ];
 
 /* jump straight to any screen of the demo without walking the flows */
@@ -31,15 +36,15 @@ const SHORTCUTS: { group: string; links: { label: string; href?: string }[] }[] 
   {
     group: "Creator side",
     links: [
-      { label: "Creator flow, from the start", href: `/c/${DEMO}` },
-      { label: "Creator done screen", href: `/c/${DEMO}?step=done` },
+      { label: "Creator preview", href: `/c/${DEMO}?preview=1` },
+      { label: "Creator flow, as a creator", href: `/c/${DEMO}` },
     ],
   },
   { group: "Not built yet", links: [{ label: "Customize" }] },
 ];
 
 const noop = () => () => {};
-/* the creator preview embeds the whole flow in a phone frame; no gear inside that */
+/* the Customize page's phone runs the creator flow in an iframe; no gear inside that */
 function useEmbedded() {
   return useSyncExternalStore(noop, () => new URLSearchParams(window.location.search).get("embed") === "1", () => false);
 }
@@ -48,7 +53,7 @@ function useEmbedded() {
 export default function ControlPanel() {
   const [open, setOpen] = useState(false);
   const [section, setSection] = useState<"shortcuts" | "look" | null>("shortcuts");
-  const { heroBg, setHeroBg } = useControls();
+  const { heroBg, setHeroBg, address, setAddress } = useControls();
   const pathname = usePathname();
   const embedded = useEmbedded();
   const ref = useRef<HTMLDivElement>(null);
@@ -99,7 +104,7 @@ export default function ControlPanel() {
                     <div className="px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-muted">{g.group}</div>
                     <ul>
                       {g.links.map((l) => {
-                        const here = l.href && l.href.split(/[?&]/)[0] === pathname && !l.href.includes("open=") && !l.href.includes("step=");
+                        const here = l.href && l.href.split(/[?&]/)[0] === pathname && !l.href.includes("open=");
                         return (
                           <li key={l.label}>
                             {l.href ? (
@@ -126,26 +131,8 @@ export default function ControlPanel() {
               </Section>
 
               <Section title="Look" hint="Theme and versions" open={section === "look"} onToggle={() => toggle("look")}>
-                <fieldset className="px-2 pb-1 pt-2">
-                  <legend className="text-[13px] font-medium text-ink-2">Hero background</legend>
-                  <div className="mt-2 grid grid-cols-2 gap-1 rounded-[14px] bg-[#f3f2f9] p-1">
-                    {HERO_OPTIONS.map((o) => {
-                      const on = heroBg === o.value;
-                      return (
-                        <button
-                          key={o.value}
-                          type="button"
-                          aria-pressed={on}
-                          onClick={() => setHeroBg(o.value)}
-                          className={`rounded-[10px] px-3 py-2 text-left transition-all duration-200 ${on ? "bg-white shadow-[0_4px_12px_-6px_rgba(40,30,110,0.35)]" : "hover:bg-white/60"}`}
-                        >
-                          <span className={`block text-[14px] font-semibold ${on ? "text-violet" : "text-ink"}`}>{o.label}</span>
-                          <span className="block text-[12px] text-muted">{o.hint}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </fieldset>
+                <Toggle legend="Hero background" options={HERO_OPTIONS} value={heroBg} onChange={setHeroBg} />
+                <Toggle legend="Creator flow, step 4" options={ADDRESS_OPTIONS} value={address} onChange={setAddress} />
               </Section>
             </div>
           </motion.div>
@@ -163,6 +150,32 @@ export default function ControlPanel() {
         <RiSettings3Line size={20} aria-hidden="true" className={`transition-transform duration-500 ${open ? "rotate-90" : ""}`} />
       </button>
     </div>
+  );
+}
+
+/* a two-way switch with a label and a hint on each side */
+function Toggle<T extends string>({ legend, options, value, onChange }: { legend: string; options: { value: T; label: string; hint: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <fieldset className="px-2 pb-1 pt-2">
+      <legend className="text-[13px] font-medium text-ink-2">{legend}</legend>
+      <div className="mt-2 grid grid-cols-2 gap-1 rounded-[14px] bg-[#f3f2f9] p-1">
+        {options.map((o) => {
+          const on = value === o.value;
+          return (
+            <button
+              key={o.value}
+              type="button"
+              aria-pressed={on}
+              onClick={() => onChange(o.value)}
+              className={`rounded-[10px] px-3 py-2 text-left transition-all duration-200 ${on ? "bg-white shadow-[0_4px_12px_-6px_rgba(40,30,110,0.35)]" : "hover:bg-white/60"}`}
+            >
+              <span className={`block text-[14px] font-semibold ${on ? "text-violet" : "text-ink"}`}>{o.label}</span>
+              <span className="block text-[12px] text-muted">{o.hint}</span>
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
   );
 }
 

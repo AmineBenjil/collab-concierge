@@ -1,6 +1,6 @@
 "use client";
 
-import { RiArrowLeftLine, RiLogoutBoxRLine } from "@remixicon/react";
+import { RiArrowDownSLine, RiArrowLeftLine, RiInbox2Fill, RiInbox2Line, RiLogoutBoxRLine, RiPaletteFill, RiPaletteLine, RiShareForwardFill, RiShareForwardLine } from "@remixicon/react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,12 +9,12 @@ import { Avatar } from "../HandleForm";
 import Logo, { BrandIcon } from "../Logo";
 import { displayName } from "../names";
 import { recallEmail, useHandle } from "./store";
-import { EASE, Thumb } from "./ui";
+import { EASE } from "./ui";
 
 /*
-  The frame around the business side (/start, /share, /requests, /customize): the soft glow, the floating
-  glass bar and the toast. It's a layout, so it stays mounted while you switch tabs and the
-  Share/Requests/Customize thumb can slide between them.
+  The frame around the business side (/start, /share, /requests, /customize): the soft glow, the app bar
+  and the toast. It's a layout, so it stays mounted while you switch pages and the underline under
+  Share/Requests/Customize can slide between them.
 */
 
 type Toast = { msg: string; action?: { label: string; run: () => void } };
@@ -40,28 +40,19 @@ export default function Shell({ children }: { children: ReactNode }) {
   return (
     <ToastContext value={say}>
       <div className="relative min-h-svh overflow-x-clip bg-bg">
-        {/* the glow and dots stay pinned to the viewport while the page scrolls over them */}
-        <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden">
-          <Backdrop />
-        </div>
-
-        {/* a second copy of the backdrop over the top strip, fading out below the bar: content scrolling up
-            dissolves into the background behind the header instead of peeking out above it */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[100px] overflow-hidden bg-bg [mask-image:linear-gradient(to_bottom,#000_66%,transparent)] sm:h-[108px]"
-        >
-          <div className="absolute inset-x-0 top-0 h-svh">
+        {/* the glow and dots stay pinned to the viewport while the page scrolls over them; Customize splits
+            the screen into flat panels, so it goes without */}
+        {pathname !== "/customize" && (
+          <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden">
             <Backdrop />
           </div>
-        </div>
+        )}
 
-        {/* same floating glass bar as the landing page nav once it's scrolled */}
-        <header className="fixed inset-x-0 top-3 z-50 flex justify-center px-2 sm:top-4">
-          <nav
-            aria-label="Main"
-            className="flex h-[58px] w-full max-w-[860px] items-center justify-between rounded-[18px] border border-[#e5e7eb]/70 bg-white/90 pl-4 pr-2 text-ink shadow-[0_12px_24px_-14px_rgba(50,38,98,0.14)] backdrop-blur-xl"
-          >
+        {/* inside the Concierge the nav is an app bar: full width, flush with the top edge, frosted so the
+            page scrolls softly under it; brand and account sit out at the edges, 48px in on laptops */}
+        <header className="fixed inset-x-0 top-0 z-50 border-b border-[#e9e9ef] bg-white/80 backdrop-blur-xl backdrop-saturate-150">
+          {/* logo, pages in the middle, account; the middle column stays centred whatever the sides hold */}
+          <nav aria-label="Main" className="grid h-16 w-full grid-cols-[1fr_auto_1fr] items-center gap-3 px-5 text-ink sm:px-8 lg:px-12">
             <div className="flex items-center gap-2">
               {!live && (
                 <Link href="/" aria-label="Back to the home page" className="-ml-1 grid h-9 w-9 place-items-center rounded-full text-ink-2 transition-colors hover:bg-lilac hover:text-ink">
@@ -69,19 +60,23 @@ export default function Shell({ children }: { children: ReactNode }) {
                 </Link>
               )}
               <Link href="/" aria-label="Benable Collab Concierge home" className="flex items-center gap-3">
-                {/* phones get the icon alone so the live header has room */}
+                {/* phones get the icon alone so the pages have room */}
                 <BrandIcon size={30} className="sm:hidden" />
                 <span className="hidden sm:block">
                   <Logo />
                 </span>
-                <span className="hidden h-4 w-px bg-ink/15 sm:block" />
-                <span className="hidden text-[14px] font-semibold sm:block">Collab Concierge</span>
+                <span className="hidden h-4 w-px bg-ink/15 lg:block" />
+                <span className="hidden text-[14px] font-semibold lg:block">Collab Concierge</span>
               </Link>
             </div>
             <AnimatePresence>
               {live && (
-                <motion.div className="flex items-center gap-2 pr-1 sm:gap-5" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }}>
-                  <Tabs pathname={pathname} handle={handle} />
+                <motion.div key="pages" className="h-full" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }}>
+                  <Pages pathname={pathname} handle={handle} />
+                </motion.div>
+              )}
+              {live && (
+                <motion.div key="account" className="col-start-3 justify-self-end" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: EASE }}>
                   <Account handle={handle} />
                 </motion.div>
               )}
@@ -135,27 +130,40 @@ function Backdrop() {
   );
 }
 
-/* Share, Requests and Customize are real pages, so the switch is navigation; the white thumb follows the route */
-function Tabs({ pathname, handle }: { pathname: string; handle: string }) {
+/*
+  Share, Requests and Customize are real pages, so the switch is navigation. Airbnb-style: centred, an icon
+  beside each label (filled on the page you're on) and a dark underline on the bar's edge that slides
+  between them. Phones stack the icon over a small label.
+*/
+const PAGES = [
+  { href: "/share", label: "Share", icon: RiShareForwardLine, on: RiShareForwardFill },
+  { href: "/requests", label: "Requests", icon: RiInbox2Line, on: RiInbox2Fill },
+  { href: "/customize", label: "Customize", icon: RiPaletteLine, on: RiPaletteFill },
+];
+
+function Pages({ pathname, handle }: { pathname: string; handle: string }) {
   const q = `?handle=${encodeURIComponent(handle)}`;
-  const tabs = [
-    { href: "/share", label: "Share" },
-    { href: "/requests", label: "Requests" },
-    { href: "/customize", label: "Customize" },
-  ];
   return (
-    <div className="flex items-center rounded-full bg-[#eef0f3] p-1 shadow-[inset_0_1px_2px_rgba(15,20,40,0.06)]">
-      {tabs.map((t) => {
-        const on = pathname === t.href;
+    <div className="flex h-full items-stretch sm:gap-3">
+      {PAGES.map((p) => {
+        const on = pathname === p.href;
+        const Icon = on ? p.on : p.icon;
         return (
           <Link
-            key={t.href}
-            href={t.href + q}
+            key={p.href}
+            href={p.href + q}
             aria-current={on ? "page" : undefined}
-            className={`relative rounded-full px-2.5 py-1.5 text-[13.5px] font-semibold transition-colors duration-200 sm:px-4 sm:text-[14px] ${on ? "text-ink" : "text-muted hover:text-ink"}`}
+            className="group relative flex flex-col items-center justify-center gap-0.5 px-3 sm:flex-row sm:gap-2 sm:px-3.5"
           >
-            {on && <Thumb layoutId="concierge-tab-thumb" />}
-            <span className="relative">{t.label}</span>
+            <Icon
+              size={20}
+              aria-hidden="true"
+              className={`transition-[color,transform] duration-200 group-hover:scale-110 ${on ? "text-[#5035e3]" : "text-[#9a9aa8] group-hover:text-ink-2"}`}
+            />
+            <span className={`text-[11.5px] font-semibold transition-colors duration-200 sm:text-[14.5px] ${on ? "text-ink" : "text-muted group-hover:text-ink"}`}>{p.label}</span>
+            {/* a grey line previews the hover; the dark one marks where you are */}
+            <span aria-hidden="true" className="absolute inset-x-2.5 -bottom-px h-[3px] rounded-full bg-[#dcdce3] opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+            {on && <motion.span layoutId="concierge-page-line" aria-hidden="true" transition={{ duration: 0.4, ease: EASE }} className="absolute inset-x-2.5 -bottom-px h-[3px] rounded-full bg-ink" />}
           </Link>
         );
       })}
@@ -191,8 +199,13 @@ function Account({ handle }: { handle: string }) {
           setEmail(recallEmail());
           setOpen((o) => !o);
         }}
-        className="block rounded-full transition-transform duration-200 hover:scale-[1.04] active:scale-[0.98]"
+        className="group -mr-1 flex items-center gap-2.5 rounded-full p-1 transition-colors duration-200 hover:bg-[#f4f4f6] aria-expanded:bg-[#f4f4f6] sm:pl-3.5"
       >
+        {/* the brand's name and a chevron say this opens; the avatar closes the bar at the edge. Phones keep just the avatar */}
+        <span className="hidden items-center gap-1 sm:flex">
+          <span className="max-w-[180px] truncate text-[14.5px] font-semibold text-ink">{displayName(handle)}</span>
+          <RiArrowDownSLine size={18} aria-hidden="true" className={`shrink-0 text-muted transition-transform duration-200 group-hover:text-ink-2 ${open ? "rotate-180" : ""}`} />
+        </span>
         <Avatar handle={handle} size={36} />
       </button>
       <AnimatePresence>

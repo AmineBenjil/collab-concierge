@@ -3,8 +3,8 @@
 import { useSyncExternalStore } from "react";
 
 /*
-  What a business can change about its link (the Customize page): the welcome DM, its own questions
-  (asked after ours) and the thank-you DM. Kept in localStorage per handle, so the creator page, the
+  What a business can change on the Customize page: its Concierge's brief, plus what creators see on
+  its link: the welcome DM, its own questions (asked after ours) and the thank-you DM. Kept in localStorage per handle, so the creator page, the
   phone preview's iframe and the editor all read the same copy, and other tabs hear about changes.
 */
 
@@ -18,12 +18,55 @@ export type Question = {
   multi: boolean;
 };
 
-export type Custom = { welcome: string; thanks: string; questions: Question[] };
+/*
+  The brief: what the Concierge knows about the business, written however they like under a few
+  headings. Creators never see it; it lives here so the whole Customize page shares one copy.
+  Each heading carries the short tags the folded card shows while its text is still ours.
+*/
+export const BRIEF = [
+  {
+    id: "about",
+    heading: "About us",
+    tags: ["LA café"],
+    text: "Kona Coffee is a neighborhood café in Los Angeles. We roast our own beans in small batches and pour them as espresso, pour-overs and cold brew.\nWe sell our beans by the bag in the café and online too.",
+  },
+  {
+    id: "collabs",
+    heading: "The collabs we want",
+    tags: ["Gifted visits", "No fees"],
+    text: "Gifted visits: a creator comes in, has coffee and pastries on us, and posts about it. A bag of beans to take home is the most we add.\nWe don't pay creator fees right now, apart from small UGC deals.",
+  },
+  {
+    id: "who",
+    heading: "Who to prioritize",
+    tags: ["LA audience", "5k+ followers"],
+    text: "Creators with a real Los Angeles audience. Locals come in; followers in other cities don't.\nFood, coffee and lifestyle creators first. We'd host someone with 5,000 followers if the engagement is real.",
+  },
+  {
+    id: "ugc",
+    heading: "UGC",
+    tags: ["UGC under $100"],
+    text: "Open to it. If someone makes great photos or videos of our drinks and gives us full usage rights, a gifted visit or a small fee (under $100) works.",
+  },
+  {
+    id: "dealbreakers",
+    heading: "Dealbreakers",
+    tags: [],
+    text: "Bought followers, anything that wouldn't reflect well on us, or low-quality content.",
+  },
+  { id: "else", heading: "Anything else?", tags: [], text: "Nope!" },
+] as const;
+export type BriefId = (typeof BRIEF)[number]["id"];
+
+/* gifted: a note on the payment question saying the business usually goes for gifted (unpaid) collabs */
+export type Custom = { welcome: string; thanks: string; questions: Question[]; gifted: boolean; brief: Record<BriefId, string> };
 
 export const DEFAULT_CUSTOM: Custom = {
   welcome: "So glad you reached out! Tell us about yourself and what you have in mind. We'll get back to you soon! 💜",
   thanks: "Thank you so much! We can’t wait to review and get back to you! 🙌",
   questions: [],
+  gifted: false,
+  brief: Object.fromEntries(BRIEF.map((s) => [s.id, s.text])) as Record<BriefId, string>,
 };
 
 /* the creator flow's own steps, in order, as the business reads them */
@@ -32,7 +75,7 @@ export const ALWAYS_ASKED = [
   { step: "collab", label: "What they have in mind for the collab" },
   { step: "payment", label: "Whether they need payment" },
   { step: "audience", label: "Their audience and content" },
-  { step: "based", label: "Where they're based" },
+  { step: "based", label: "Their address" },
   { step: "contact", label: "How to reach them" },
 ] as const;
 export type AskedStep = (typeof ALWAYS_ASKED)[number]["step"];
@@ -72,7 +115,10 @@ function read(handle: string): Custom {
   if (hit && hit.raw === raw) return hit.value;
   let value = DEFAULT_CUSTOM;
   try {
-    if (raw) value = { ...DEFAULT_CUSTOM, ...JSON.parse(raw) };
+    if (raw) {
+      const saved = JSON.parse(raw);
+      value = { ...DEFAULT_CUSTOM, ...saved, brief: { ...DEFAULT_CUSTOM.brief, ...saved.brief } };
+    }
   } catch {}
   cache.set(handle, { raw, value });
   return value;

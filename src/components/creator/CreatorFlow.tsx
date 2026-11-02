@@ -5,46 +5,51 @@ import {
   RiArrowLeftSLine,
   RiCheckLine,
   RiCloseLine,
-  RiEyeLine,
+  RiErrorWarningLine,
   RiFilePdf2Line,
+  RiGiftLine,
   RiImageAddLine,
-  RiInstagramLine,
-  RiLockLine,
+  RiInformationLine,
   RiListCheck2,
+  RiLock2Line,
   RiMapPin2Line,
+  RiMoneyDollarCircleLine,
   RiUpload2Line,
+  type RemixiconComponentType,
 } from "@remixicon/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
-import { Avatar } from "../HandleForm";
+import { useControls } from "../controls";
 import Logo from "../Logo";
-import { cleanHandle, displayName } from "../names";
-import { OTHER, READY, useCustom, type AskedStep, type PreviewMessage, type Question, type Screen } from "./custom";
+import { BUSINESS } from "./business";
 import PreviewDevice from "./PreviewDevice";
+import { OTHER, READY, useCustom, type AskedStep, type PreviewMessage, type Question, type Screen } from "./custom";
 
 /*
-  benable.com/c/<handle>, what a creator sees after the business replies to their DM with its link.
-  Built for a phone first (most creators open it inside Instagram): one question per screen,
-  a sticky button within thumb reach, and the draft saved as they go.
-  Copy is Tony's, from his prototype.
+  The link a creator gets when they DM the business: one question per screen, a sticky button
+  within thumb reach, and the draft saved as they go. Phone first (most creators open it inside
+  Instagram). On a laptop the page goes edge to edge: a full-width header and photo, with the questions
+  and their button in one centred column.
+  The screens are the Collab Concierge creator flow, with nothing filled in for them.
+  The business's Customize page (welcome DM, its own questions, thank-you DM) is read from storage; inside
+  that page's phone (?customize=1) the editor picks the screen and sends its edits as they're typed.
 */
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const RANGES = ["Under $100", "$100 to $250", "$250 to $500", "$500 to $1,000", "$1,000+"];
+const RANGES = ["Under $100", "$100–$250", "$250–$500", "$500–$1,000", "$1,000+"];
+const { name, handle: business } = BUSINESS;
 
 type Step = "opener" | "socials" | "collab" | "payment" | "audience" | "manual" | "based" | "contact" | "custom" | "extra" | "done";
 const GROUPS = ["Socials", "Collab", "Audience", "Details"];
-/* where a step sits in the progress bar; the business's own questions (n of them, asked after ours) stretch Details */
-function place(step: Step, n: number, qi: number): [group: number, at: number, of: number] | undefined {
+/* where a step sits in the progress bar: [group, step within it, steps in it]; the business's own questions (n, asked after ours) stretch Details */
+function place(step: Step, n: number, qi: number): [number, number, number] | undefined {
   const fixed: Partial<Record<Step, [number, number, number]>> = {
     socials: [0, 1, 1],
     collab: [1, 1, 2],
     payment: [1, 2, 2],
-    audience: [2, 1, 2],
-    manual: [2, 2, 2],
+    audience: [2, 1, 1],
+    manual: [2, 1, 1],
     based: [3, 1, 3 + n],
     contact: [3, 2, 3 + n],
     custom: [3, 3 + qi, 3 + n],
@@ -52,36 +57,7 @@ function place(step: Step, n: number, qi: number): [group: number, at: number, o
   };
   return fixed[step];
 }
-
-/*
-  The business's preview fills the form in for them: each step types its answers, then a tap hint
-  sits on the button that moves on, so they can tap through the whole flow the way a creator would.
-*/
-const DEMO = { name: "Nia Carter", followers: "33.9K", avatar: "/img/dash/nia.jpg" };
-const SCRIPT: Partial<Record<Step, [field: keyof Draft, value: string][]>> = {
-  socials: [["handle", "niacarter"]],
-  collab: [
-    ["create", "A Reel and two Stories brewing your beans at home, with a code for my followers."],
-    ["want", "A bag of beans to try. No payment needed."],
-  ],
-  payment: [
-    ["paid", "yes"],
-    ["range", "$100 to $250"],
-    ["paid", "no"],
-  ],
-  based: [["based", "Los Angeles, CA"]],
-  contact: [
-    ["first", "Nia"],
-    ["last", "Carter"],
-    ["email", "niacarter@gmail.com"],
-    ["phone", "(323) 555-0148"],
-  ],
-  extra: [["extra", "Weekday mornings work best. Happy to tag you in Stories too."]],
-};
-// the preview's stand-in Insights screenshots, dropped into the manual step one by one
-const DEMO_SHOTS = ["/img/creator/insights-overview.svg", "/img/creator/insights-audience.svg", "/img/creator/insights-engagement.svg"];
-const TYPED = new Set<keyof Draft>(["handle", "create", "want", "based", "first", "last", "email", "phone", "extra"]);
-type Lookup = "idle" | "searching" | "found" | "confirmed";
+const SCREEN_STEP = (s: Screen): Step => (s.kind === "step" ? (s.step as AskedStep) : s.kind === "empty" ? "custom" : s.kind);
 
 type Draft = {
   handle: string;
@@ -89,8 +65,14 @@ type Draft = {
   want: string;
   paid: "" | "yes" | "no";
   range: string;
-  insights: "" | "connected" | "manual";
+  insights: "" | "manual"; // took the screenshots route instead of Connect
   based: string;
+  street: string;
+  apt: string;
+  city: string;
+  region: string;
+  postcode: string;
+  country: string;
   first: string;
   last: string;
   email: string;
@@ -100,39 +82,27 @@ type Draft = {
 };
 type Answer = { text: string; picks: string[]; other: string };
 const NO_ANSWER: Answer = { text: "", picks: [], other: "" };
-const EMPTY: Draft = { handle: "", create: "", want: "", paid: "", range: "", insights: "", based: "", first: "", last: "", email: "", phone: "", extra: "", answers: {} };
-
+const EMPTY: Draft = { handle: "", create: "", want: "", paid: "", range: "", insights: "", based: "", street: "", apt: "", city: "", region: "", postcode: "", country: "United States", first: "", last: "", email: "", phone: "", extra: "", answers: {} };
 /* an answer counts once there's text, or a pick (and words for "Other" if that's the pick) */
-const answered = (q: Question, a: Answer) =>
-  q.kind === "text" ? !!a.text.trim() : a.picks.length > 0 && (!a.picks.includes(OTHER) || !!a.other.trim());
+const answered = (q: Question, a: Answer) => (q.kind === "text" ? !!a.text.trim() : a.picks.length > 0 && (!a.picks.includes(OTHER) || !!a.other.trim()));
+const answerText = (q: Question, a: Answer) => (q.kind === "text" ? a.text.trim() : a.picks.map((p) => (p === OTHER ? a.other.trim() : p)).join(", "));
+/* the shipping address on one line, as the business reads it */
+const addressLine = (d: Draft) => [d.street, d.apt, d.city, d.region, d.postcode, d.country].map((x) => x.trim()).filter(Boolean).join(", ");
+const cleanHandle = (raw: string) => raw.trim().replace(/^@+/, "").replace(/\s+/g, "").toLowerCase();
 
-/* the Customize preview drives the flow from outside, so its fields mustn't pull focus from the editor */
-const AutoFocus = createContext(true);
+/* there's no Instagram lookup behind this yet, so "finding" the account is a short pause and the card is built from the handle */
+type Lookup = "idle" | "searching" | "found" | "confirmed";
+const LOOKUP_MS = 900;
+const handleName = (h: string) => h.split(/[._\d]+/).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1)).join(" ") || h;
 
-const draftKey = (business: string) => `cc:draft:${business}`;
-function loadDraft(business: string): Draft {
-  if (typeof window === "undefined") return EMPTY;
-  try {
-    const raw = localStorage.getItem(draftKey(business));
-    return raw ? { ...EMPTY, ...JSON.parse(raw) } : EMPTY;
-  } catch {
-    return EMPTY;
-  }
-}
-
-const noop = () => () => {};
-/* "preview": the business testing its link. "embed": the same flow inside PreviewDevice's phone.
-   "customize": the Customize page's phone, which picks the screen and sends the unsaved edits. */
-function useMode() {
-  return useSyncExternalStore(
-    noop,
-    () => {
-      const q = new URLSearchParams(window.location.search);
-      return q.get("customize") === "1" ? "customize" : q.get("embed") === "1" ? "embed" : q.get("preview") === "1" ? "preview" : null;
-    },
-    () => null
-  );
-}
+/* the Customize page's phone: it drives the flow from outside, so nothing in it may pull focus from the editor */
+/* where this copy runs: the Customize phone (customize), the preview phone that fills itself in (embed),
+   the business's "see what creators see" link (preview: a phone frame on a laptop), or a real creator (null) */
+type Mode = "customize" | "embed" | "preview" | null;
+const modeOf = (): Mode => {
+  const q = new URLSearchParams(window.location.search);
+  return q.get("customize") === "1" ? "customize" : q.get("embed") === "1" ? "embed" : q.get("preview") === "1" ? "preview" : null;
+};
 const WIDE = "(min-width: 640px)";
 function useWide() {
   return useSyncExternalStore(
@@ -146,20 +116,93 @@ function useWide() {
   );
 }
 
-export default function CreatorFlow({ handle }: { handle: string }) {
-  const name = displayName(handle);
-  const mode = useMode();
-  const wide = useWide();
-  const preview = mode === "preview";
-  const demo = mode === "embed" || preview;
-  const edit = mode === "customize";
-  const router = useRouter();
-  const reduce = useReducedMotion();
+/*
+  The business's preview fills the form in for them: each step types its answers, then a tap hint
+  sits on the button that moves on, so they can tap through the whole flow the way a creator would.
+*/
+const script = (ships: boolean): Partial<Record<Step, [field: keyof Draft, value: string][]>> => ({
+  socials: [["handle", "niacarter"]],
+  collab: [
+    ["create", "A Reel and two Stories brewing your beans at home, with a code for my followers."],
+    ["want", "A bag of beans to try. No payment needed."],
+  ],
+  payment: [
+    ["paid", "yes"],
+    ["range", "$100–$250"],
+    ["paid", "no"],
+  ],
+  based: ships
+    ? [
+        ["street", "1250 Sunset Blvd"],
+        ["city", "Los Angeles"],
+        ["region", "CA"],
+        ["postcode", "90026"],
+      ]
+    : [["based", "Silver Lake, Los Angeles"]],
+  contact: [
+    ["first", "Nia"],
+    ["last", "Carter"],
+    ["email", "niacarter@gmail.com"],
+    ["phone", "(323) 555-0148"],
+  ],
+  extra: [["extra", "Weekday mornings work best. Happy to tag you in Stories too."]],
+});
+// the preview's stand-in Insights screenshots, dropped into the screenshots step one by one
+const DEMO_SHOTS = ["/img/creator/insights-overview.svg", "/img/creator/insights-audience.svg", "/img/creator/insights-engagement.svg"];
+const TYPED = new Set<keyof Draft>(["handle", "create", "want", "range", "based", "street", "city", "region", "postcode", "first", "last", "email", "phone", "extra"]);
+const noop = () => () => {};
+const AutoFocus = createContext(true);
 
+const DRAFT_KEY = `cc:apply:${business}`;
+function loadDraft(): Draft {
+  if (typeof window === "undefined" || modeOf()) return EMPTY; // previews start blank and save nothing
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    return raw ? { ...EMPTY, ...JSON.parse(raw) } : EMPTY;
+  } catch {
+    return EMPTY;
+  }
+}
+
+/* Insights screenshots are scaled down to this many pixels on the long side before they're sent */
+const SHOT_MAX = 1400;
+async function shrink(file: File): Promise<string> {
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, SHOT_MAX / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(bitmap.width * scale);
+  canvas.height = Math.round(bitmap.height * scale);
+  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return canvas.toDataURL("image/jpeg", 0.82);
+}
+
+/* the last step's optional files: images are shrunk like the Insights shots, PDFs go as they are,
+   and the caps keep the whole request under the host's 4.5 MB body limit */
+type Attachment = { name: string; size: number; pdf: boolean; url: string };
+const FILES_MAX = 3;
+const PDF_MAX = 2 * 1024 * 1024;
+const FILES_BUDGET = 3_000_000; // characters of data URL across all files
+const readAsDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+
+export default function CreatorFlow({ handle: page = business }: { handle?: string }) {
+  const reduce = useReducedMotion();
+  /* step 4: a local spot asks where they are, a brand that ships asks for an address (the control panel switches it) */
+  const ships = useControls().address === "shipping";
+  const mode = useSyncExternalStore(noop, modeOf, () => null);
+  const edit = mode === "customize";
+  const demo = mode === "embed" || mode === "preview";
+  const wide = useWide();
   const [current, setStep] = useState<Step>("opener");
   const [qi, setQi] = useState(0);
-  const stored = useCustom(handle);
-  /* customize: the editor posts its live copy and the screen to show, and asks again once we're listening */
+  /* the business's Customize edits; inside its phone, the editor posts its live copy and the screen to show */
+  const stored = useCustom(page);
   const [live, setLive] = useState<PreviewMessage | null>(null);
   useEffect(() => {
     if (!edit) return;
@@ -170,31 +213,25 @@ export default function CreatorFlow({ handle }: { handle: string }) {
   }, [edit]);
   const custom = live?.custom ?? stored;
   const screen: Screen | null = edit ? (live?.screen ?? { kind: "opener" }) : null;
-  /* ?step=done (the control panel's "Creator done screen" shortcut) opens on the end screen, until they move on */
-  const skipToDone = useSyncExternalStore(noop, () => new URLSearchParams(window.location.search).get("step") === "done", () => false);
-  const [moved, setMoved] = useState(false);
-  const step: Step = screen ? SCREEN_STEP(screen) : skipToDone && !moved ? "done" : current;
-  /* the question on screen: the editor's draft while customizing, otherwise the business's own list */
+  const step: Step = screen ? SCREEN_STEP(screen) : current;
   const qs = custom.questions;
   const question: Question | null = screen ? (screen.kind === "custom" ? screen.question : null) : (qs[qi] ?? null);
   const [dir, setDir] = useState<1 | -1>(1);
   // the opener shows none of the draft, so reading storage up front can't change the first paint
-  const [d, setD] = useState<Draft>(() => loadDraft(handle));
+  const [d, setD] = useState<Draft>(loadDraft);
   const [shots, setShots] = useState<(string | null)[]>([null, null, null]);
-  const [connecting, setConnecting] = useState(false);
-  const [headsUp, setHeadsUp] = useState(false);
+  const [shotError, setShotError] = useState(false);
   const [saved, setSaved] = useState(false);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const later = (fn: () => void, ms: number) => timers.current.push(setTimeout(fn, ms));
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(false);
 
-  /* save the draft as they type; a quiet "Saved" says it worked (the preview's typed-in answers aren't kept) */
+  /* save the draft as they type; a quiet "Saved" says it worked */
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => {
     const next = { ...d, [k]: v };
     setD(next);
-    if (demo || edit) return;
+    if (edit || demo) return;
     try {
-      localStorage.setItem(draftKey(handle), JSON.stringify(next));
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(next));
       setSaved(true);
     } catch {}
   };
@@ -204,46 +241,102 @@ export default function CreatorFlow({ handle }: { handle: string }) {
     return () => clearTimeout(t);
   }, [saved, d]);
 
-  /* screenshots stay in this tab only; their object URLs are released when replaced or on leave */
-  const shotsRef = useRef(shots);
-  useEffect(() => {
-    shotsRef.current = shots;
-  }, [shots]);
-  useEffect(() => () => shotsRef.current.forEach((u) => u?.startsWith("blob:") && URL.revokeObjectURL(u)), []);
-  const addShot = (i: number, file?: File) => {
+  const addShot = async (i: number, file?: File) => {
     if (!file) return;
-    setShots((prev) => {
-      const next = [...prev];
-      if (next[i]?.startsWith("blob:")) URL.revokeObjectURL(next[i]!);
-      next[i] = URL.createObjectURL(file);
-      return next;
-    });
+    try {
+      const url = await shrink(file);
+      setShotError(false);
+      setShots((prev) => prev.map((s, j) => (j === i ? url : s)));
+    } catch {
+      setShotError(true);
+    }
   };
 
-  /* the last step's optional files (media kit, past work); the demo only shows them back, nothing is sent */
   const [files, setFiles] = useState<Attachment[]>([]);
-  const filesRef = useRef(files);
+  const handle = cleanHandle(d.handle);
+  const [found, setFound] = useState(""); // the handle the (pretend) lookup finished for
+  const [mine, setMine] = useState(""); // the handle they said "that's me" to
   useEffect(() => {
-    filesRef.current = files;
-  }, [files]);
-  useEffect(() => () => filesRef.current.forEach((f) => URL.revokeObjectURL(f.url)), []);
-  const addFiles = (list: File[]) =>
-    setFiles((prev) => [...prev, ...list.slice(0, FILES_MAX - prev.length).map((f) => ({ name: f.name, size: f.size, pdf: f.type === "application/pdf", url: URL.createObjectURL(f) }))]);
-  const dropFile = (i: number) =>
-    setFiles((prev) => {
-      URL.revokeObjectURL(prev[i].url);
-      return prev.filter((_, j) => j !== i);
-    });
+    if (!handle) return;
+    const t = setTimeout(() => setFound(handle), LOOKUP_MS);
+    return () => clearTimeout(t);
+  }, [handle]);
+  // a beat to see "That's me" land, then on to the next question (as in the demo)
+  const onward = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const confirm = () => {
+    if (edit) return;
+    setMine(handle);
+    onward.current = setTimeout(() => go("collab"), 700);
+  };
+  const lookup: Lookup = !handle ? "idle" : mine === handle ? "confirmed" : found === handle ? "found" : "searching";
+  const [fileError, setFileError] = useState("");
+  const addFiles = async (list: File[]) => {
+    setFileError("");
+    let next = files;
+    for (const file of list) {
+      if (next.length >= FILES_MAX) break;
+      const pdf = file.type === "application/pdf";
+      if (pdf && file.size > PDF_MAX) {
+        setFileError(`${file.name} is over 2 MB. Try a smaller PDF.`);
+        continue;
+      }
+      if (!pdf && !file.type.startsWith("image/")) {
+        setFileError(`${file.name} isn't a PDF or an image.`);
+        continue;
+      }
+      try {
+        const url = pdf ? await readAsDataUrl(file) : await shrink(file);
+        if (next.reduce((n, f) => n + f.url.length, url.length) > FILES_BUDGET) {
+          setFileError("That's a lot to send at once. Try fewer or smaller files.");
+          continue;
+        }
+        next = [...next, { name: file.name, size: pdf ? file.size : Math.round((url.length * 3) / 4), pdf, url }];
+      } catch {
+        setFileError(`We couldn't open ${file.name}. Try a PDF, PNG or JPG.`);
+      }
+    }
+    setFiles(next);
+  };
+  const dropFile = (i: number) => {
+    setFileError("");
+    setFiles((prev) => prev.filter((_, j) => j !== i));
+  };
+
+  /* Connect Instagram (Zernio) isn't wired up yet: after a beat it hands over to the screenshots, saying why */
+  const [connecting, setConnecting] = useState(false);
+  const [notice, setNotice] = useState(false);
+  const toManual = (why = false) => {
+    if (edit) return;
+    setNotice(why);
+    set("insights", "manual");
+    go("manual");
+  };
+  const connect = () => {
+    if (edit || connecting) return;
+    setConnecting(true);
+    // the preview shows Connect working, as it will once Zernio is wired up; real creators get the screenshots
+    onward.current = demo ? setTimeout(() => go("based"), 1600) : setTimeout(() => toManual(true), 900);
+  };
+
+  const go = (to: Step, direction: 1 | -1 = 1, toQ = 0) => {
+    if (edit) return; // the editor picks what its phone shows
+    clearTimeout(onward.current); // Back during the beat after "That's me" (or while connecting) wins
+    setConnecting(false);
+    setQi(toQ);
+    setDir(direction);
+    setStep(to);
+    setSendError(false);
+    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+  };
 
   /* preview: each step types its answers in, then flags the button to tap; leaving the step stops it */
   const [filled, setFilled] = useState<Step | null>(null);
-  const [lookup, setLookup] = useState<Lookup>("idle");
   useEffect(() => {
     if (!demo) return;
     const ts: ReturnType<typeof setTimeout>[] = [];
     const put = (k: keyof Draft, v: string) => setD((p) => ({ ...p, [k]: v }));
     let t = 650; // let the step slide in first
-    for (const [k, v] of SCRIPT[step] ?? []) {
+    for (const [k, v] of script(ships)[step] ?? []) {
       if (!TYPED.has(k)) {
         ts.push(setTimeout(() => put(k, v), t));
         t += 1100; // long enough to see each choice land
@@ -254,6 +347,7 @@ export default function CreatorFlow({ handle }: { handle: string }) {
       for (let i = 1; i <= v.length; i++) ts.push(setTimeout(() => put(k, v.slice(0, i)), t + i * speed));
       t += v.length * speed + 380;
     }
+    if (step === "socials") t += LOOKUP_MS + 300; // the account card comes up before the tap hint
     if (step === "manual") {
       // each empty slot gets its screenshot in turn; ones the business added itself stay
       DEMO_SHOTS.forEach((src, i) => {
@@ -261,46 +355,29 @@ export default function CreatorFlow({ handle }: { handle: string }) {
         t += 900;
       });
     }
-    if (step === "socials") {
-      // the same "is this you?" as the hero: look the handle up, then ask
-      ts.push(setTimeout(() => setLookup("searching"), t));
-      t += 1000;
-      ts.push(setTimeout(() => setLookup("found"), t));
-    }
     ts.push(setTimeout(() => setFilled(step), t));
     return () => {
       ts.forEach(clearTimeout);
       setFilled(null);
-      setLookup("idle");
     };
-  }, [demo, step]);
+  }, [demo, step, ships]);
   const hint = (s: Step) => demo && filled === s && step === s;
-
-  const go = (to: Step, direction: 1 | -1 = 1, toQ = 0) => {
-    if (edit) return; // the preview shows what the editor picks
-    setQi(toQ);
-    setMoved(true);
-    setDir(direction);
-    setStep(to);
-    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
-  };
 
   const valid: Record<Step, boolean> = {
     opener: true,
-    socials: cleanHandle(d.handle).length > 0,
+    socials: lookup === "confirmed",
     collab: !!d.create.trim() && !!d.want.trim(),
     payment: d.paid === "no" || (d.paid === "yes" && !!d.range),
-    audience: d.insights === "connected",
+    audience: false, // left through Connect Instagram or "Add screenshots instead", not Next
     manual: shots.every(Boolean),
-    based: !!d.based.trim(),
+    based: ships ? !!d.street.trim() && !!d.city.trim() && !!d.postcode.trim() && !!d.country : !!d.based.trim(),
     contact: !!d.first.trim() && !!d.last.trim() && EMAIL.test(d.email.trim()) && d.phone.replace(/\D/g, "").length >= 7,
     // the preview's tap-through doesn't type into the business's own questions, so it doesn't wait on them
     custom: demo || !question || answered(question, d.answers[question.id] ?? NO_ANSWER),
     extra: true,
     done: true,
   };
-
-  const NEXT: Record<Step, Step> = {
+  const NEXT: Partial<Record<Step, Step>> = {
     opener: "socials",
     socials: "collab",
     collab: "payment",
@@ -311,7 +388,6 @@ export default function CreatorFlow({ handle }: { handle: string }) {
     contact: qs.length ? "custom" : "extra",
     custom: qi < qs.length - 1 ? "custom" : "extra",
     extra: "done",
-    done: "opener",
   };
   const BACK: Partial<Record<Step, Step>> = {
     socials: "opener",
@@ -319,7 +395,7 @@ export default function CreatorFlow({ handle }: { handle: string }) {
     payment: "collab",
     audience: "payment",
     manual: "audience",
-    based: d.insights === "manual" ? "manual" : "audience",
+    based: "audience",
     contact: "based",
     custom: qi > 0 ? "custom" : "contact",
     extra: qs.length ? "custom" : "contact",
@@ -328,73 +404,64 @@ export default function CreatorFlow({ handle }: { handle: string }) {
   const nextQ = step === "custom" ? qi + 1 : 0;
   const backQ = step === "custom" ? qi - 1 : qs.length - 1;
 
-  const connect = () => {
-    setHeadsUp(false);
-    if (connecting) return;
-    setConnecting(true);
-    later(() => {
-      setConnecting(false);
-      set("insights", "connected");
-      // a beat on "Connected", then on to the next question, unless they already moved on
-      later(() => {
-        setDir(1);
-        setStep((s) => (s === "audience" ? "based" : s));
-      }, 900);
-    }, 1600);
+  const send = async () => {
+    if (demo) return go("done"); // the preview sends nothing
+    setSending(true);
+    setSendError(false);
+    try {
+      const res = await fetch("/api/apply", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ...d,
+          handle: cleanHandle(d.handle),
+          range: d.paid === "yes" ? d.range : "",
+          based: ships ? addressLine(d) : d.based.trim(),
+          kind: ships ? "shipping" : "local",
+          answers: qs.map((q) => ({ question: q.title, answer: answerText(q, d.answers[q.id] ?? NO_ANSWER) })),
+          screenshots: shots,
+          files: files.map(({ name, url }) => ({ name, url })),
+        }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch {}
+      go("done");
+    } catch {
+      setSendError(true);
+    } finally {
+      setSending(false);
+    }
   };
 
   const submit = (e?: FormEvent) => {
     e?.preventDefault();
-    if (edit || !valid[step]) return;
-    if (step === "done") {
-      const share = `/share?handle=${encodeURIComponent(handle)}`;
-      if (mode === "embed") return void (window.top ?? window).location.assign(share);
-      if (preview) return router.push(share);
-      // a real creator heads to the business's Instagram; the request is in, so the draft goes
-      try {
-        localStorage.removeItem(draftKey(handle));
-      } catch {}
-      return void window.open(`https://www.instagram.com/${encodeURIComponent(handle)}`, "_blank", "noopener");
-    }
-    go(NEXT[step], 1, nextQ);
+    if (edit || !valid[step] || sending) return;
+    if (step === "extra") return void send();
+    go(NEXT[step]!, 1, nextQ);
   };
+
+  // after the thank-you, the preview goes back to the business's Concierge
+  const share = () => (window.top ?? window).location.assign(`/share?handle=${encodeURIComponent(page)}`);
 
   const at = screen?.kind === "custom" ? place("custom", screen.total, screen.index) : screen?.kind === "empty" ? place("custom", screen.total, 0) : place(step, qs.length, qi);
 
   // on a laptop, the preview is the real flow inside a phone, so it reads the way creators see it
-  if (preview && wide) return <PreviewDevice handle={handle} draftKey={draftKey(handle)} />;
+  if (mode === "preview" && wide) return <PreviewDevice handle={page} />;
 
   return (
     <AutoFocus value={!edit}>
-    <div className="relative min-h-svh bg-[#f4f3f8]">
-      {/* desktop: the café's own colours, blurred far back, so the card feels like theirs */}
-      <div className="pointer-events-none fixed inset-0 hidden overflow-hidden sm:block" aria-hidden="true">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/img/ig/konacoffee.jpg" alt="" className="h-full w-full scale-125 object-cover opacity-35 blur-[90px]" />
-        <div className="absolute inset-0 bg-[#f4f3f8]/60" />
-      </div>
-
-      {preview && (
-        <div className="sticky top-0 z-40 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-ink px-4 py-2.5 text-center text-[13px] text-white/80">
-          <span className="inline-flex items-center gap-1.5">
-            <RiEyeLine size={15} aria-hidden="true" />
-            Preview. This is what creators see.
-          </span>
-          <Link href={`/share?handle=${encodeURIComponent(handle)}`} className="font-semibold text-white underline decoration-white/40 underline-offset-4 hover:decoration-white">
-            Back to your Concierge
-          </Link>
-        </div>
-      )}
-
-      <div className="relative mx-auto flex min-h-svh w-full max-w-[460px] flex-col bg-white sm:my-10 sm:min-h-[min(820px,calc(100svh-80px))] sm:rounded-[32px] sm:border sm:border-white/70 sm:shadow-[0_40px_90px_-40px_rgba(40,30,110,0.45)]">
+    <div className="creator-flow relative min-h-svh bg-white">
+      <main className="relative flex min-h-svh w-full flex-col">
         {step === "opener" ? (
-          <Opener name={name} welcome={custom.welcome} onStart={() => go("socials")} hint={hint("opener")} />
+          <Opener welcome={custom.welcome} onStart={() => go("socials")} hint={hint("opener")} />
         ) : step === "done" ? (
-          <Done name={name} handle={handle} thanks={custom.thanks} onDone={() => submit()} hint={hint("done")} />
+          <Done thanks={custom.thanks} onDone={demo ? share : undefined} hint={hint("done")} />
         ) : (
           <>
-            <TopBar step={at!} onBack={() => go(BACK[step]!, -1, backQ)} saved={saved} handle={handle} />
-            <form id="flow" onSubmit={submit} className="flex-1 px-6 pb-6 pt-7">
+            <TopBar step={at!} onBack={() => go(step === "based" && d.insights === "manual" ? "manual" : BACK[step]!, -1, backQ)} saved={saved} />
+            <form id="flow" onSubmit={submit} noValidate className={`${COLUMN} flex-1 px-4 pb-8 pt-[17px] sm:px-6 sm:pb-12 sm:pt-12`}>
               <AnimatePresence mode="wait" custom={dir} initial={false}>
                 <motion.div
                   key={step === "custom" ? `custom-${screen ? "edit" : qi}` : step}
@@ -409,23 +476,12 @@ export default function CreatorFlow({ handle }: { handle: string }) {
                   exit="exit"
                   transition={{ duration: 0.32, ease: EASE }}
                 >
-                  {step === "socials" && (
-                    <Socials
-                      d={d}
-                      set={set}
-                      lookup={demo ? lookup : undefined}
-                      hint={hint("socials")}
-                      onConfirm={() => {
-                        setLookup("confirmed");
-                        later(() => go("collab"), 700);
-                      }}
-                    />
-                  )}
+                  {step === "socials" && <Socials d={d} set={set} lookup={lookup} onConfirm={confirm} hint={hint("socials")} />}
                   {step === "collab" && <Collab d={d} set={set} />}
-                  {step === "payment" && <Payment d={d} set={set} />}
-                  {step === "audience" && <Audience name={name} handle={cleanHandle(d.handle)} connecting={connecting} connected={d.insights === "connected"} />}
-                  {step === "manual" && <Manual name={name} shots={shots} onAdd={addShot} />}
-                  {step === "based" && <Based d={d} set={set} />}
+                  {step === "payment" && <Payment d={d} set={set} gifted={custom.gifted} />}
+                  {step === "audience" && <Connect />}
+                  {step === "manual" && <Audience shots={shots} onAdd={addShot} error={shotError} notice={notice} />}
+                  {step === "based" && (ships ? <Shipping d={d} set={set} /> : <Based d={d} set={set} />)}
                   {step === "contact" && <Contact d={d} set={set} />}
                   {step === "custom" &&
                     (question ? (
@@ -433,201 +489,157 @@ export default function CreatorFlow({ handle }: { handle: string }) {
                     ) : (
                       <NoQuestions />
                     ))}
-                  {step === "extra" && <Extra d={d} set={set} files={files} onAdd={addFiles} onRemove={dropFile} />}
+                  {step === "extra" && <Extra d={d} set={set} files={files} onAdd={addFiles} onRemove={dropFile} fileError={fileError} />}
                 </motion.div>
               </AnimatePresence>
+              <div id="flow-end" aria-hidden="true" />
             </form>
+
+            <Footer>
+              <AnimatePresence initial={false}>
+                {sendError && (
+                  <motion.p
+                    role="alert"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.25, ease: EASE }}
+                    className="overflow-hidden text-center text-[14px] text-[#c23a56]"
+                  >
+                    <span className="flex items-center justify-center gap-1.5 pb-3">
+                      <RiErrorWarningLine size={16} aria-hidden="true" />
+                      That didn&apos;t send. Check your connection and try again.
+                    </span>
+                  </motion.p>
+                )}
+              </AnimatePresence>
+              {step === "audience" ? (
+                <>
+                  <Primary type="button" onClick={connect} busy={connecting} hint={hint("audience") && !connecting}>
+                    Connect Instagram
+                  </Primary>
+                  <button type="button" onClick={() => toManual()} className="mt-1 flex h-12 w-full items-center justify-center text-[16px] font-medium text-[#717171] transition-colors hover:text-[#1c1c1c]">
+                    Add screenshots instead
+                  </button>
+                </>
+              ) : (
+                <Primary type="submit" form="flow" disabled={!valid[step]} busy={sending} hint={hint(step) && valid[step]}>
+                  {step === "extra" ? (sending ? "Sending…" : "Send my request") : "Next"}
+                </Primary>
+              )}
+            </Footer>
           </>
         )}
-
-        {step !== "opener" && step !== "done" && !(demo && step === "socials") && (
-          <Footer>
-            {step === "audience" && d.insights !== "connected" ? (
-              <>
-                <Primary type="button" onClick={connect} busy={connecting} hint={hint("audience") && !connecting}>
-                  {connecting ? (
-                    "Connecting…"
-                  ) : (
-                    <>
-                      <RiInstagramLine size={19} aria-hidden="true" /> Connect Instagram
-                    </>
-                  )}
-                </Primary>
-                <button type="button" onClick={() => setHeadsUp(true)} disabled={connecting} className={`${CTA_QUIET} disabled:opacity-40`}>
-                  Enter manually
-                </button>
-              </>
-            ) : step === "audience" ? (
-              <Primary type="button" onClick={() => go("based")}>
-                <RiCheckLine size={19} aria-hidden="true" /> Connected
-              </Primary>
-            ) : (
-              <Primary type="submit" form="flow" disabled={!valid[step]} hint={hint(step) && valid[step]}>
-                {step === "extra" ? "Send my request" : "Next"}
-              </Primary>
-            )}
-          </Footer>
-        )}
-
-        <AnimatePresence>
-          {headsUp && (
-            <HeadsUp
-              onConnect={connect}
-              onManual={() => {
-                setHeadsUp(false);
-                set("insights", "manual");
-                go("manual");
-              }}
-              onClose={() => setHeadsUp(false)}
-            />
-          )}
-        </AnimatePresence>
-      </div>
+      </main>
     </div>
     </AutoFocus>
   );
 }
 
-const SCREEN_STEP = (s: Screen): Step => (s.kind === "step" ? (s.step as AskedStep) : s.kind === "empty" ? "custom" : s.kind);
-
 /* ---------- screens ---------- */
 
-/*
-  The first screen, built to Design Labs 15526:88239: the café's photo fading to white under a
-  "Powered by Benable" strip, their avatar and name pill, the title, their welcome message, and Let's go.
-*/
-function Opener({ name, welcome, onStart, hint = false }: { name: string; welcome: string; onStart: () => void; hint?: boolean }) {
+/* the first screen: the Benable cover fading to white, their avatar and name, the title, their welcome DM, and Let's go */
+function Opener({ welcome, onStart, hint = false }: { welcome: string; onStart: () => void; hint?: boolean }) {
   return (
     <div className="relative flex flex-1 flex-col">
       <Cover height={415} top={0.5} />
       <PoweredBy />
 
-      <Enter i={1} className="relative mt-[229.75px] flex flex-col items-center gap-6 px-[21.38px]">
-        <Business name={name} />
+      <Enter i={1} className={`${COLUMN} relative mt-[229.75px] flex flex-col items-center gap-6 px-[21.38px] sm:mt-[250px]`}>
+        <Business />
         <Headline>Request a collab</Headline>
       </Enter>
 
-      {/* the business's welcome DM (Customize); cleared, the screen goes straight to Let's go */}
       {welcome.trim() && (
-        <Enter i={2} className="relative mt-[60.75px]">
+        <Enter i={2} className={`${COLUMN} relative mt-[60.75px] sm:mt-12`}>
           <Bubble>{welcome}</Bubble>
         </Enter>
       )}
 
-      <div className="sticky bottom-0 z-20 mt-auto px-5 pb-[max(30.5px,env(safe-area-inset-bottom))] pt-6">
-        <CardButton onClick={onStart} hint={hint}>
+      <div className={`${COLUMN} ${DOCK} pb-[max(30.5px,env(safe-area-inset-bottom))]`}>
+        <button type="button" onClick={onStart} className={CTA}>
           Let&apos;s go
-        </CardButton>
+          {hint && <TapHint />}
+        </button>
         <p className="mt-4 text-center text-[14px] leading-4 text-[#aaa]">About 2 minutes</p>
       </div>
     </div>
   );
 }
 
-/* ---------- the opener and thank-you screens share these, built to their Figma frames ---------- */
-
-/* the same Benable cover for every business (their own photo sits on top as the avatar): the soft brand
-   gradient from Figma (Design Labs 15432:46578, also the hero's) with faint violet doodles, fading to white */
-function Cover({ height, top }: { height: number; top: number }) {
+/* the thank-you screen: what happens next, the business's thank-you DM, and one button to follow them */
+function Done({ thanks, onDone, hint = false }: { thanks: string; onDone?: () => void; hint?: boolean }) {
   return (
-    <div className="pointer-events-none absolute inset-x-0 overflow-hidden sm:rounded-t-[32px]" style={{ top, height }} aria-hidden="true">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/img/hero-v2-bg.png" alt="" className="absolute inset-0 h-full w-full object-cover" />
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/img/creator/pattern-lines.png" alt="" className="absolute inset-0 h-full w-full object-cover object-top opacity-40" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_top,#fff,rgba(255,255,255,0))]" />
-    </div>
-  );
-}
+    <div className="relative flex flex-1 flex-col">
+      <Cover height={257} top={1} />
+      <PoweredBy />
+      <Confetti />
 
-/* the dark strip at the top: "Powered by" and the Benable logo, centred on each other */
-function PoweredBy() {
-  return (
-    <div className="sticky top-0 z-10 flex h-[67px] items-start justify-center bg-[linear-gradient(to_top,rgba(0,0,0,0)_4.753%,rgba(0,0,0,0.3)_74.958%)] px-5 pb-5 pt-3 text-white sm:rounded-t-[32px]">
-      <div className="flex items-center gap-2">
-        <span className="text-[16px] leading-[normal]">Powered by</span>
-        <Logo height={25.115} />
+      <Enter i={1} className={`${COLUMN} relative mt-[69.75px] flex flex-col items-center gap-6 px-[21.38px] sm:mt-[150px]`}>
+        <Business />
+        <div className="flex w-full flex-col items-center gap-2 text-center">
+          <Headline>Amazing!</Headline>
+          <p className="text-[16px] leading-[normal] text-[#717171]">Your collab request is being reviewed by {name}. We&apos;ll text you the second they answer.</p>
+        </div>
+      </Enter>
+
+      {thanks.trim() && (
+        <Enter i={2} className={`${COLUMN} relative mt-[37.5px] sm:mt-10`}>
+          <Bubble>{thanks}</Bubble>
+        </Enter>
+      )}
+
+      <div className={`${COLUMN} ${DOCK} pb-[max(21px,env(safe-area-inset-bottom))]`}>
+        {/* the preview's last tap goes back to the Concierge instead of Instagram */}
+        <a
+          href={`https://www.instagram.com/${encodeURIComponent(business)}`}
+          target="_blank"
+          rel="noopener"
+          onClick={(e) => {
+            if (!onDone) return;
+            e.preventDefault();
+            onDone();
+          }}
+          className={CTA}
+        >
+          Follow @{business} on Instagram
+          {hint && <TapHint />}
+        </a>
+        <p className="mx-auto mt-[14px] w-[295px] max-w-full text-center text-[13px] leading-[17px] text-[#4a4a4a]">
+          <span className="font-semibold">Benable</span> is an app that connects over 1 million creators with local businesses and brands.
+        </p>
       </div>
     </div>
   );
 }
 
-/* their avatar (a half-white hairline ring and a soft shadow) tucked into a white name pill with the brand gradient as its stroke */
-function Business({ name }: { name: string }) {
-  return (
-    <div className="flex flex-col items-center">
-      <span className="relative mb-[-18px] size-20 shrink-0 rounded-full shadow-[0_1px_14px_rgba(0,0,0,0.25)] outline outline-[1.5px] outline-white/50">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/img/ig/konacoffee.jpg" alt="" className="size-full rounded-full object-cover" />
-      </span>
-      <span className="relative max-w-full rounded-full border border-transparent px-4 py-1 [background:linear-gradient(#fff,#fff)_padding-box,var(--brand-grad)_border-box]">
-        <span className="block truncate font-display text-[20px] font-medium leading-[normal] text-[#1c1c1c]">{name}</span>
-      </span>
-    </div>
-  );
-}
-
-function Headline({ children }: { children: ReactNode }) {
-  // ! beats the global h1 rule (bold, 0.98 line height, its own tracking)
-  return <h1 className="w-full text-center font-display text-[30px] !font-extrabold uppercase !leading-[26px] !tracking-[-0.5px] text-[#474747]">{children}</h1>;
-}
-
-/* a DM from the business: their avatar and a grey bubble with a tucked bottom-left corner */
-function Bubble({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex items-end gap-2.5 px-5">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/img/ig/konacoffee.jpg" alt="" width={32} height={32} className="size-8 shrink-0 rounded-full object-cover" />
-      <p className="min-w-0 flex-1 rounded-[16px] rounded-bl-[4px] bg-[#eef2f5] py-2.5 pl-2.5 pr-[11px] font-[-apple-system,'SF_Pro','SF_Pro_Text','Helvetica_Neue',Inter,sans-serif] text-[14px] leading-[16.7px] tracking-[-0.3px] text-[#0f1316]">
-        {children}
-      </p>
-    </div>
-  );
-}
-
-/* every full-width call to action in the flow, sized and coloured like the opener's "Let's go" */
-const CTA = "relative flex h-12 w-full items-center justify-center gap-2 rounded-[12px] bg-[#7a5cfa] px-4 text-[16px] font-medium leading-[normal] text-white transition-[background-color,transform] duration-200 hover:bg-[#6c4ef0] active:scale-[0.985]";
-// the quiet full-width option under a CTA, at the same height and corners
-const CTA_QUIET = "mt-1 h-12 w-full rounded-[12px] text-[16px] font-medium text-ink-2 transition-colors hover:bg-[#f4f3f8]";
-
-function CardButton({ children, onClick, hint = false }: { children: ReactNode; onClick: () => void; hint?: boolean }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={CTA}
-    >
-      {children}
-      {hint && <TapHint />}
-    </button>
-  );
-}
-
-function Socials({ d, set, lookup, hint = false, onConfirm }: Bind & { lookup?: Lookup; hint?: boolean; onConfirm?: () => void }) {
+function Socials({ d, set, lookup, onConfirm, hint = false }: Bind & { lookup: Lookup; onConfirm: () => void; hint?: boolean }) {
   const id = useId();
   const open = lookup === "found" || lookup === "confirmed";
+  const handle = cleanHandle(d.handle);
   return (
     <>
       <Title sub="Add your primary Instagram.">Your socials</Title>
-      <div className="relative mt-7">
+      <Label className="mt-6">Platform</Label>
+      <div className="relative mt-2">
         <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
           <IgGlyph />
         </span>
-        <select aria-label="Platform" defaultValue="instagram" className={`${field} cursor-pointer appearance-none pl-12 pr-11 font-medium`}>
+        <select aria-label="Platform" defaultValue="instagram" className={`${field} appearance-none pl-12 pr-11 text-[16px] font-medium`}>
           <option value="instagram">Instagram</option>
           <option value="tiktok" disabled>
             TikTok (coming soon)
           </option>
         </select>
-        <RiArrowDownSLine size={20} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-muted" aria-hidden="true" />
+        <RiArrowDownSLine size={20} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#717171]" aria-hidden="true" />
       </div>
-      <label htmlFor={id} className="sr-only">
-        Your handle
-      </label>
-      <div className={`${field} mt-3 flex items-center gap-1 focus-within:bg-white focus-within:shadow-[inset_0_0_0_2px_#5035e3]`}>
-        <span className="text-muted">@</span>
-        <input id={id} autoFocus={useContext(AutoFocus) && !lookup} autoCapitalize="none" autoCorrect="off" spellCheck={false} value={d.handle} onChange={(e) => set("handle", e.target.value)} placeholder="Your handle" className="h-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted" />
-        {lookup === "searching" && <span className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-violet/15 border-t-violet motion-reduce:animate-none" aria-hidden="true" />}
+      <Label className="mt-4">
+        <label htmlFor={id}>Your handle</label>
+      </Label>
+      <div className={`${field} ${fieldWithin} mt-2 flex items-center gap-1`}>
+        <span className="text-[#aaa]">@</span>
+        <input id={id} autoFocus={useContext(AutoFocus)} autoCapitalize="none" autoCorrect="off" spellCheck={false} value={d.handle} onChange={(e) => set("handle", e.target.value)} placeholder="yourhandle" className="h-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-[#aaa]" />
+        {lookup === "searching" && <span className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-[#7a5cfa]/15 border-t-[#7a5cfa] motion-reduce:animate-none" aria-hidden="true" />}
         {open && (
           <motion.span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-mint/15 text-[#178a60]" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.35, ease: EASE }}>
             <RiCheckLine size={16} aria-label="Account found" />
@@ -635,7 +647,7 @@ function Socials({ d, set, lookup, hint = false, onConfirm }: Bind & { lookup?: 
         )}
       </div>
 
-      {/* "is this you?", as in the hero: the account we found, and one tap to say yes */}
+      {/* "is this you?": the account we found, and one tap to say yes before Next unlocks */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -647,12 +659,12 @@ function Socials({ d, set, lookup, hint = false, onConfirm }: Bind & { lookup?: 
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.4, ease: EASE }}
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={DEMO.avatar} alt="" className="size-12 shrink-0 rounded-full object-cover" />
+            <span className="grid size-12 shrink-0 place-items-center rounded-full bg-lilac text-[18px] font-semibold text-violet" aria-hidden="true">
+              {handle[0]?.toUpperCase()}
+            </span>
             <div className="min-w-0 flex-1 leading-tight">
-              <div className="truncate text-[16px] font-semibold text-ink">{DEMO.name}</div>
-              {/* the handle is right above in the field, so the card spends its second line on reach */}
-              <div className="mt-0.5 truncate text-[13.5px] text-muted">{DEMO.followers} followers</div>
+              <div className="truncate text-[16px] font-semibold text-ink">{handleName(handle)}</div>
+              <div className="mt-0.5 truncate text-[13.5px] text-muted">@{handle}</div>
             </div>
             <AnimatePresence mode="wait" initial={false}>
               {lookup === "confirmed" ? (
@@ -691,53 +703,47 @@ function Collab({ d, set }: Bind) {
   return (
     <>
       <Title>What did you have in mind for the collab?</Title>
-      <Area label="What would you create or do for us?" hint="Share any specifics you have in mind, and say if you're open to other kinds of collabs too." value={d.create} onChange={(v) => set("create", v)} autoFocus className="mt-7" />
+      <Area label="What would you create or do for us?" hint="Share any specifics you have in mind, and say if you're open to other kinds of collabs too." value={d.create} onChange={(v) => set("create", v)} autoFocus className="mt-6" />
       <Area label="What would you like from us?" hint="Any complimentary services or products, and whether you're expecting payment." value={d.want} onChange={(v) => set("want", v)} className="mt-6" />
     </>
   );
 }
 
-function Payment({ d, set }: Bind) {
+function Payment({ d, set, gifted }: Bind & { gifted: boolean }) {
   return (
     <>
-      <Title>Please confirm</Title>
-      <div className="mt-7 text-[16px] font-semibold text-ink">Would you require a payment for this collab?</div>
-      <div role="radiogroup" aria-label="Payment" className="mt-3 grid grid-cols-2 gap-2">
-        {(["yes", "no"] as const).map((v) => (
-          <Choice key={v} on={d.paid === v} onClick={() => set("paid", v)} className="h-[52px] text-[17px]">
-            {v === "yes" ? "Yes" : "No"}
-          </Choice>
-        ))}
+      {/* built to Figma (Design Labs 15596:53212): the question, the business's tip, two option cards, and the fee range under a yes */}
+      <Title>Do you need payment for this collab?</Title>
+      {/* the business's Customize toggle: it mostly does gifted collabs, so they read that before they answer */}
+      {gifted && (
+        <div className="mt-4">
+          <Note>
+            {name} usually prioritizes <span className="font-semibold">gifted collabs</span> where no payment is required.
+          </Note>
+        </div>
+      )}
+      <div role="radiogroup" aria-label="Payment" className="mt-6 flex flex-col gap-4">
+        <Option on={d.paid === "no"} onClick={() => set("paid", "no")} title="No" badge={gifted ? "Recommended" : undefined} icon={RiGiftLine}>
+          You&apos;ll receive the product. Brands like {name} reply fastest to gifted requests.
+        </Option>
+        <Option on={d.paid === "yes"} onClick={() => set("paid", "yes")} title="Yes" icon={RiMoneyDollarCircleLine}>
+          Product plus a fee. Paid requests are less likely to be accepted.
+        </Option>
       </div>
       {/* the range only matters if they're charging, so it waits for a yes */}
       <AnimatePresence initial={false}>
         {d.paid === "yes" && (
           <motion.div key="yes" initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.35, ease: EASE }} className="overflow-hidden">
-            <div className="pt-7 text-[16px] font-semibold text-ink">Please indicate a range</div>
-            <div role="radiogroup" aria-label="Payment range" className="mt-3 flex flex-wrap gap-2">
+            <Label sub={`We share the range with ${name} before they decide.`} className="pt-4">
+              Fee range
+            </Label>
+            <div role="radiogroup" aria-label="Fee range" className="mt-4 flex flex-wrap gap-3">
               {RANGES.map((r) => (
-                <Choice key={r} on={d.range === r} onClick={() => set("range", r)} className="h-11 px-4 text-[15px]">
+                <Chip key={r} on={d.range === r} onClick={() => set("range", r)}>
                   {r}
-                </Choice>
+                </Chip>
               ))}
             </div>
-          </motion.div>
-        )}
-        {/* a no gets said back to them in full, so it's clear what they're agreeing to */}
-        {d.paid === "no" && (
-          /* same card and entrance as the "is this you?" account match on the socials step; no height clip, so the shadow stays whole */
-          <motion.div
-            key="no"
-            className="mt-3 flex items-center gap-3 rounded-[22px] border border-line bg-white py-4 pl-5 pr-4 shadow-[0_24px_50px_-22px_rgba(40,30,110,0.45)]"
-            initial={{ opacity: 0, y: -8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -6, scale: 0.98 }}
-            transition={{ duration: 0.4, ease: EASE }}
-          >
-            <span className="min-w-0 flex-1 text-[16px] font-semibold leading-snug text-ink">No, I&apos;m not looking to receive payment for this collab</span>
-            <span className="grid size-7 shrink-0 place-items-center rounded-full bg-mint/15 text-[#178a60]">
-              <RiCheckLine size={16} aria-hidden="true" />
-            </span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -745,50 +751,46 @@ function Payment({ d, set }: Bind) {
   );
 }
 
-function Audience({ name, handle, connecting, connected }: { name: string; handle: string; connecting: boolean; connected: boolean }) {
-  const items = ["Follower size and engagement", "Audience insights and location", "Your content and performance"];
+/* step 3: connect Instagram (read-only, through Zernio), with screenshots as the way round it */
+const SEES = ["Follower size and engagement", "Audience insights and location", "Your content and how it performs"];
+function Connect() {
   return (
     <>
-      <Title sub={`Connect Instagram so ${name} can see your account size, audience, and content at a glance.`}>Your audience and content</Title>
-      <div className="relative mt-7 overflow-hidden rounded-[22px] border border-line bg-[#fafafc] p-5">
-        <div className="text-[13px] font-semibold text-muted">What {name} will see</div>
-        <ul className="mt-3.5 space-y-3">
-          {items.map((t, i) => (
-            <li key={t} className="flex items-center gap-3 text-[15px] text-ink">
-              <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full transition-colors duration-300 ${connected ? "bg-mint text-white" : "bg-mint/12 text-[#178a60]"}`} style={{ transitionDelay: connected ? `${i * 120}ms` : "0ms" }}>
+      <Title sub={`Connect Instagram so ${name} can see your account size, audience and content at a glance.`}>Your audience and content</Title>
+      <div className="mt-6 rounded-[12px] border border-[#e3e3e3] bg-white p-4">
+        <div className="text-[14px] font-semibold text-[#1c1c1c]">What {name} will see</div>
+        <ul className="mt-3 space-y-3">
+          {SEES.map((s) => (
+            <li key={s} className="flex items-center gap-3 text-[14px] text-[#1c1c1c]">
+              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-mint/15 text-[#178a60]">
                 <RiCheckLine size={14} aria-hidden="true" />
               </span>
-              {t}
+              {s}
             </li>
           ))}
         </ul>
-        <AnimatePresence>
-          {(connecting || connected) && (
-            <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.3, ease: EASE }} className="mt-4 flex items-center gap-3 border-t border-line pt-4">
-              <IgGlyph />
-              <div className="min-w-0 flex-1 text-[14.5px] leading-tight">
-                <div className="font-semibold text-ink">{connected ? `Connected as @${handle}` : "Connecting to Instagram…"}</div>
-              </div>
-              {connecting ? (
-                <span className="h-5 w-5 animate-spin rounded-full border-2 border-violet/15 border-t-violet motion-reduce:animate-none" aria-hidden="true" />
-              ) : (
-                <span className="grid h-6 w-6 place-items-center rounded-full bg-mint text-white">
-                  <RiCheckLine size={14} aria-hidden="true" />
-                </span>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
-      <p className="mt-4 flex items-center gap-2 text-[13.5px] text-muted">
-        <RiLockLine size={15} className="shrink-0" aria-hidden="true" />
-        Your data stays fully private, read-only. Disconnect anytime.
-      </p>
+      <div className="mt-4 flex gap-2 text-[14px] leading-[1.45] text-[#717171]">
+        <RiInformationLine size={18} className="mt-px shrink-0" aria-hidden="true" />
+        <p>
+          You&apos;ll log in to Instagram here in your browser, then come straight back. <strong className="font-semibold text-[#1c1c1c]">On its permissions screen, leave the second switch on</strong> (the first is always on and
+          shows grey): it lets {name} see your numbers. Forgot your password?{" "}
+          <a href="https://www.instagram.com/accounts/password/reset/" target="_blank" rel="noopener" className="font-semibold text-[#7a5cfa] hover:underline">
+            Reset it first
+          </a>
+          , then come back to this page.
+        </p>
+      </div>
+      <div className="mt-4 flex gap-2 text-[12px] leading-[1.45] text-[#aaa]">
+        <RiLock2Line size={18} className="mt-px shrink-0" aria-hidden="true" />
+        <p>Read-only: we can&apos;t post or message. We read your stats once, then disconnect. Connects through Zernio, using Instagram&apos;s official login. We keep your stats for your collab requests; ask us anytime to delete them.</p>
+      </div>
     </>
   );
 }
 
-function Manual({ name, shots, onAdd }: { name: string; shots: (string | null)[]; onAdd: (i: number, f?: File) => void }) {
+/* three Insights screenshots, picked from the camera roll and shown back as thumbnails */
+function Audience({ shots, onAdd, error, notice }: { shots: (string | null)[]; onAdd: (i: number, f?: File) => void; error: boolean; notice: boolean }) {
   const slots = [
     { title: "Overview", hint: "Insights → Overview. Accounts reached and followers." },
     { title: "Audience", hint: "Insights → Total followers. Top cities, age, gender." },
@@ -797,34 +799,32 @@ function Manual({ name, shots, onAdd }: { name: string; shots: (string | null)[]
   return (
     <>
       <Title sub={`Add three screenshots from Instagram Insights. ${name} sees these and nothing else.`}>Your audience and content</Title>
-      <ul className="mt-7 space-y-2.5">
+      {notice && (
+        <div role="status" className="mt-4">
+          <Note>Connecting Instagram isn&apos;t ready yet, so add these three screenshots instead. It takes about a minute.</Note>
+        </div>
+      )}
+      <ul className="mt-6 space-y-4">
         {slots.map((s, i) => {
           const src = shots[i];
           return (
-            <li key={s.title} className={`flex items-center gap-3.5 rounded-[20px] border p-3 transition-colors duration-300 ${src ? "border-mint/30 bg-mint/[0.05]" : "border-line bg-white"}`}>
-              <span className="relative grid h-14 w-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-lilac text-[15px] font-bold text-violet">
+            <li key={s.title} className={`flex items-center gap-3 p-4 ${card(!!src)}`}>
+              <span className="relative grid h-14 w-11 shrink-0 place-items-center overflow-hidden rounded-[8px] border-[0.5px] border-[#e3e3e3] bg-[#f7f7f7] text-[14px] font-semibold text-[#717171]">
                 {src ? (
-                  <motion.img
-                    key={src}
-                    src={src}
-                    alt={`${s.title} screenshot`}
-                    className="h-full w-full object-cover"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ type: "spring", stiffness: 380, damping: 26 }}
-                  />
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={src} alt={`${s.title} screenshot`} className="h-full w-full object-cover" />
                 ) : (
                   i + 1
                 )}
               </span>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 text-[15.5px] font-semibold text-ink">
+                <div className={`flex items-center gap-1.5 text-[16px] font-bold transition-colors duration-200 ${src ? "text-[#7a5cfa]" : "text-[#1c1c1c]"}`}>
                   {s.title}
-                  {src && <RiCheckLine size={16} className="text-mint" aria-hidden="true" />}
+                  {src && <RiCheckLine size={16} aria-hidden="true" />}
                 </div>
-                <div className="mt-0.5 text-[13px] leading-snug text-muted">{s.hint}</div>
+                <div className="mt-1 text-[12px] leading-snug text-[#717171]">{s.hint}</div>
               </div>
-              <label className={`inline-flex h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-4 text-[14px] font-semibold transition-colors ${src ? "text-ink-2 hover:bg-[#f4f3f8]" : "bg-ink text-white hover:bg-black"}`}>
+              <label className={`inline-flex h-[34px] shrink-0 items-center gap-1.5 rounded-[8px] px-2.5 text-[14px] font-medium transition-colors focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#7a5cfa] ${src ? "border-[0.5px] border-[#e3e3e3] bg-[#f7f7f7] text-[#717171] hover:text-[#1c1c1c]" : "bg-[#7a5cfa] text-white hover:bg-[#6c4ef0]"}`}>
                 {!src && <RiImageAddLine size={16} aria-hidden="true" />}
                 {src ? "Change" : "Add"}
                 <input type="file" accept="image/*" className="sr-only" onChange={(e) => onAdd(i, e.target.files?.[0])} />
@@ -833,6 +833,11 @@ function Manual({ name, shots, onAdd }: { name: string; shots: (string | null)[]
           );
         })}
       </ul>
+      {error && (
+        <p role="alert" className="mt-3 px-1 text-[13.5px] text-[#c23a56]">
+          We couldn&apos;t open that image. Try a screenshot saved as a photo (PNG or JPG).
+        </p>
+      )}
     </>
   );
 }
@@ -841,17 +846,59 @@ function Based({ d, set }: Bind) {
   const id = useId();
   return (
     <>
-      <Title sub="It helps to know for this collab.">Where are you based?</Title>
+      <Title sub="It helps to know how far you'd be coming from.">Your current or home address</Title>
       <label htmlFor={id} className="sr-only">
         Where you&apos;re based
       </label>
-      <div className={`${field} mt-7 flex items-center gap-2.5 focus-within:bg-white focus-within:shadow-[inset_0_0_0_2px_#5035e3]`}>
-        <RiMapPin2Line size={19} className="shrink-0 text-muted" aria-hidden="true" />
-        <input id={id} autoFocus={useContext(AutoFocus)} value={d.based} onChange={(e) => set("based", e.target.value)} placeholder="City, state or country" autoComplete="address-level2" className="h-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted" />
+      <div className={`${field} ${fieldWithin} mt-6 flex items-center gap-2.5`}>
+        <RiMapPin2Line size={19} className="shrink-0 text-[#717171]" aria-hidden="true" />
+        <input id={id} autoFocus={useContext(AutoFocus)} value={d.based} onChange={(e) => set("based", e.target.value)} placeholder="Neighborhood or city" autoComplete="address-level2" className="h-full min-w-0 flex-1 bg-transparent outline-none placeholder:text-[#aaa]" />
       </div>
     </>
   );
 }
+
+/* a brand that ships products: the address to send them to */
+function Shipping({ d, set }: Bind) {
+  const id = useId();
+  return (
+    <>
+      <Title sub="Where you'd like any products shipped.">Your shipping address</Title>
+      <div className="mt-6 space-y-3">
+        <Input label="Street address" value={d.street} onChange={(v) => set("street", v)} autoComplete="address-line1" autoFocus />
+        <Input label="Apt, suite, etc. (optional)" value={d.apt} onChange={(v) => set("apt", v)} autoComplete="address-line2" />
+        <Input label="City" value={d.city} onChange={(v) => set("city", v)} autoComplete="address-level2" />
+        <div className="grid grid-cols-2 gap-3">
+          <Input label="Region (optional)" value={d.region} onChange={(v) => set("region", v)} autoComplete="address-level1" />
+          <Input label="Postcode" value={d.postcode} onChange={(v) => set("postcode", v)} autoComplete="postal-code" />
+        </div>
+        {/* the country keeps its label floated, like a filled field */}
+        <div className="relative">
+          <select id={id} value={d.country} onChange={(e) => set("country", e.target.value)} autoComplete="country-name" className={`${field} h-[58px] appearance-none pb-1.5 pr-11 pt-5`}>
+            {COUNTRIES.map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </select>
+          <label htmlFor={id} className="pointer-events-none absolute left-4 top-[17px] -translate-y-1/2 text-[12.5px] text-[#aaa]">
+            Country
+          </label>
+          <RiArrowDownSLine size={20} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#717171]" aria-hidden="true" />
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* every country by its English name, A to Z (ISO 3166-1 codes named by the browser) */
+const COUNTRIES = (() => {
+  const names = new Intl.DisplayNames(["en"], { type: "region" });
+  const codes =
+    "AD AE AF AG AI AL AM AO AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GT GU GW GY HK HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW";
+  return codes
+    .split(" ")
+    .map((c) => names.of(c) ?? c)
+    .sort((a, b) => a.localeCompare(b));
+})();
 
 function Contact({ d, set }: Bind) {
   const [touched, setTouched] = useState(false);
@@ -859,11 +906,11 @@ function Contact({ d, set }: Bind) {
   return (
     <>
       <Title sub="So they know who they're saying yes to. We'll notify you as soon as they answer!">Your name and contact info</Title>
-      <div className="mt-7 grid grid-cols-2 gap-2.5">
+      <div className="mt-6 grid grid-cols-2 gap-3">
         <Input label="First name" value={d.first} onChange={(v) => set("first", v)} autoComplete="given-name" autoFocus />
         <Input label="Last name" value={d.last} onChange={(v) => set("last", v)} autoComplete="family-name" />
       </div>
-      <Input label="Email" type="email" inputMode="email" value={d.email} onChange={(v) => set("email", v)} onBlur={() => setTouched(true)} autoComplete="email" invalid={badEmail} className="mt-2.5" />
+      <Input label="Email" type="email" inputMode="email" value={d.email} onChange={(v) => set("email", v)} onBlur={() => setTouched(true)} autoComplete="email" invalid={badEmail} className="mt-3" />
       <AnimatePresence initial={false}>
         {badEmail && (
           <motion.p initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25, ease: EASE }} className="overflow-hidden px-1 text-[13.5px] text-[#c23a56]">
@@ -871,74 +918,8 @@ function Contact({ d, set }: Bind) {
           </motion.p>
         )}
       </AnimatePresence>
-      <Input label="Phone" type="tel" inputMode="tel" value={d.phone} onChange={(v) => set("phone", v)} autoComplete="tel" className="mt-2.5" />
+      <Input label="Phone" type="tel" inputMode="tel" value={d.phone} onChange={(v) => set("phone", v.replace(/[^\d+()\-.\s]/g, ""))} autoComplete="tel" className="mt-3" />
     </>
-  );
-}
-
-type Attachment = { name: string; size: number; pdf: boolean; url: string };
-const FILES_MAX = 3;
-
-function Extra({ d, set, files, onAdd, onRemove }: Bind & { files: Attachment[]; onAdd: (f: File[]) => void; onRemove: (i: number) => void }) {
-  return (
-    <>
-      <Title sub="Timing preferences, restrictions, limitations, anything else.">Anything else you&apos;d like to add?</Title>
-      <Area label="" value={d.extra} onChange={(v) => set("extra", v)} placeholder="Optional" autoFocus className="mt-7" />
-      <Files files={files} onAdd={onAdd} onRemove={onRemove} />
-    </>
-  );
-}
-
-const fileSize = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`);
-
-/* a dashed tap-to-upload box for a media kit or screenshots of past work, each file listed back with a way to take it out */
-function Files({ files, onAdd, onRemove }: { files: Attachment[]; onAdd: (f: File[]) => void; onRemove: (i: number) => void }) {
-  return (
-    <div className="mt-5">
-      <div className="flex items-baseline gap-2">
-        <span className="text-[16px] font-semibold text-ink">Upload files</span>
-        <span className="text-[14px] text-muted">Optional</span>
-      </div>
-      {files.length > 0 && (
-        <ul className="mt-3 space-y-2">
-          {files.map((f, i) => (
-            <li key={f.url} className="flex items-center gap-3 rounded-[14px] bg-[#f2f2f7] p-2 pr-1.5">
-              <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-[10px] bg-lilac text-violet">
-                {f.pdf ? (
-                  <RiFilePdf2Line size={20} aria-hidden="true" />
-                ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={f.url} alt="" className="h-full w-full object-cover" />
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[15px] font-semibold text-ink">{f.name}</div>
-                <div className="text-[13px] text-muted">{fileSize(f.size)}</div>
-              </div>
-              <button type="button" onClick={() => onRemove(i)} aria-label={`Remove ${f.name}`} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-ink-2 transition-colors hover:bg-[#e6e6ee] hover:text-ink">
-                <RiCloseLine size={18} aria-hidden="true" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {files.length < FILES_MAX && (
-        <label className="mt-2.5 flex cursor-pointer flex-col items-center justify-center gap-3 rounded-[12px] border border-dashed border-[#717171] bg-[#fcfcfc] px-3 py-3.5 text-[#1c1c1c] transition-colors hover:bg-[#f6f6f9] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#5035e3]">
-          <RiUpload2Line size={16} aria-hidden="true" />
-          <span className="text-[13px] font-medium">Tap to upload files</span>
-          <input
-            type="file"
-            multiple
-            accept="image/*,application/pdf"
-            className="sr-only"
-            onChange={(e) => {
-              onAdd(Array.from(e.target.files ?? []));
-              e.target.value = "";
-            }}
-          />
-        </label>
-      )}
-    </div>
   );
 }
 
@@ -953,11 +934,11 @@ function Custom({ q, a, onChange }: { q: Question; a: Answer; onChange: (a: Answ
     <>
       <Title sub={q.sub.trim() || undefined}>{q.title.trim() || "Your question"}</Title>
       {q.kind === "text" ? (
-        <Area label="" value={a.text} onChange={(text) => onChange({ ...a, text })} placeholder="Type your answer" autoFocus className="mt-7" />
+        <Area label="" value={a.text} onChange={(text) => onChange({ ...a, text })} placeholder="Type your answer" autoFocus className="mt-6" />
       ) : (
         <>
-          <div className="mt-7 text-[14px] font-semibold text-muted">{q.multi ? "Pick all that apply" : "Pick one"}</div>
-          <div role={q.multi ? "group" : "radiogroup"} aria-label={q.title} className="mt-3 flex flex-col gap-2">
+          <Label className="mt-6">{q.multi ? "Pick all that apply" : "Pick one"}</Label>
+          <div role={q.multi ? "group" : "radiogroup"} aria-label={q.title} className="mt-3 flex flex-col gap-3">
             {options.map((v, i) => {
               const on = a.picks.includes(v);
               return (
@@ -967,14 +948,12 @@ function Custom({ q, a, onChange }: { q: Question; a: Answer; onChange: (a: Answ
                   role={q.multi ? "checkbox" : "radio"}
                   aria-checked={on}
                   onClick={() => pick(v)}
-                  className={`flex min-h-[52px] w-full items-center gap-3 rounded-[14px] py-3 pl-4 pr-3.5 text-left text-[17px] font-semibold transition-[background-color,box-shadow,color] duration-200 ${
-                    on ? "bg-[#5035e3]/[0.08] text-[#4429d6] shadow-[inset_0_0_0_2px_#5035e3]" : "bg-[#f2f2f7] text-ink active:bg-[#e9e9f0]"
-                  }`}
+                  className={`flex min-h-[56px] w-full items-center gap-3 px-4 py-3 text-left ${card(on)}`}
                 >
-                  <span className="min-w-0 flex-1">{v === OTHER ? "Other" : v}</span>
+                  <span className={`min-w-0 flex-1 text-[16px] font-bold transition-colors duration-200 ${on ? "text-[#7a5cfa]" : "text-[#1c1c1c]"}`}>{v === OTHER ? "Other" : v}</span>
                   <span
                     aria-hidden="true"
-                    className={`grid size-[22px] shrink-0 place-items-center transition-colors duration-200 ${q.multi ? "rounded-[7px]" : "rounded-full"} ${on ? "bg-[#5035e3] text-white" : "bg-white shadow-[inset_0_0_0_1.5px_#d4d4de]"}`}
+                    className={`grid size-[22px] shrink-0 place-items-center transition-colors duration-200 ${q.multi ? "rounded-[6px]" : "rounded-full"} ${on ? "bg-[#7a5cfa] text-white" : "border border-[#ddd] bg-white"}`}
                   >
                     {on && <RiCheckLine size={15} />}
                   </span>
@@ -989,7 +968,7 @@ function Custom({ q, a, onChange }: { q: Question; a: Answer; onChange: (a: Answ
                 <label htmlFor={otherId} className="sr-only">
                   Your answer
                 </label>
-                <input id={otherId} value={a.other} onChange={(e) => onChange({ ...a, other: e.target.value })} placeholder="Type your answer" className={`${field} mt-2 placeholder:text-muted`} />
+                <input id={otherId} value={a.other} onChange={(e) => onChange({ ...a, other: e.target.value })} placeholder="Type your answer" className={`${field} mt-3 placeholder:text-[#aaa]`} />
               </motion.div>
             )}
           </AnimatePresence>
@@ -999,58 +978,149 @@ function Custom({ q, a, onChange }: { q: Question; a: Answer; onChange: (a: Answ
   );
 }
 
-/* the Customize preview's Questions tab before the business has added any */
+/* the Customize phone's Questions tab before the business has added any */
 function NoQuestions() {
   return (
     <div className="flex flex-col items-center px-6 pt-24 text-center">
-      <span className="grid size-12 place-items-center rounded-2xl bg-lilac text-violet">
+      <span className="grid size-12 place-items-center rounded-[12px] border border-[#e3e3e3] bg-[#fcf9ff] text-[#7a5cfa]">
         <RiListCheck2 size={22} aria-hidden="true" />
       </span>
-      <p className="mt-4 text-[16px] leading-relaxed text-ink-2">Add a question and it shows up here, just as creators will see it.</p>
+      <p className="mt-4 text-[14px] leading-relaxed text-[#717171]">Add a question and it shows up here, just as creators will see it.</p>
     </div>
   );
 }
 
-/*
-  The thank-you screen, built to Design Labs 15528:88425: the same photo and name pill as the opener,
-  "Amazing!" and what happens next, the business's thank-you DM, and one button to follow them on Instagram.
-*/
-function Done({ name, handle, thanks, onDone, hint = false }: { name: string; handle: string; thanks: string; onDone: () => void; hint?: boolean }) {
+function Extra({ d, set, files, onAdd, onRemove, fileError }: Bind & { files: Attachment[]; onAdd: (f: File[]) => void; onRemove: (i: number) => void; fileError: string }) {
   return (
-    <div className="relative flex flex-1 flex-col">
-      <Cover height={257} top={1} />
-      <PoweredBy />
-      <Confetti />
+    <>
+      <Title sub="Media kit, portfolio, timing preferences, restrictions, or anything else.">Anything else you&apos;d like to add?</Title>
+      <Area label="" value={d.extra} onChange={(v) => set("extra", v)} placeholder="Optional" autoFocus className="mt-6" />
+      <Files files={files} onAdd={onAdd} onRemove={onRemove} error={fileError} />
+    </>
+  );
+}
 
-      <Enter i={1} className="relative mt-[69.75px] flex flex-col items-center gap-6 px-[21.38px]">
-        <Business name={name} />
-        <div className="flex w-full flex-col items-center gap-2 text-center">
-          <Headline>Amazing!</Headline>
-          <p className="text-[16px] leading-[normal] text-[#717171]">Your collab request is being reviewed by {name}. We&apos;ll text you the second they answer.</p>
-        </div>
-      </Enter>
+const fileSize = (b: number) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`);
 
-      {thanks.trim() && (
-        <Enter i={2} className="relative mt-[37.5px]">
-          <Bubble>{thanks}</Bubble>
-        </Enter>
+/* a dashed tap-to-upload box for a media kit or screenshots of past work, each file listed back with a way to take it out */
+function Files({ files, onAdd, onRemove, error }: { files: Attachment[]; onAdd: (f: File[]) => void; onRemove: (i: number) => void; error: string }) {
+  return (
+    <div className="mt-6">
+      <div className="flex items-center gap-1">
+        <span className="text-[14px] font-semibold text-[#1c1c1c]">Upload Media Kit or Portfolio</span>
+        <span className="text-[12px] font-medium text-[#aaa]">(Optional)</span>
+      </div>
+      {files.length > 0 && (
+        <ul className="mt-3 space-y-2">
+          {files.map((f, i) => (
+            <li key={`${f.name}-${f.url.length}-${i}`} className="flex items-center gap-3 rounded-[12px] border border-[#e3e3e3] bg-white p-2 pr-1.5">
+              <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-[8px] bg-[#fcf9ff] text-[#7a5cfa]">
+                {f.pdf ? (
+                  <RiFilePdf2Line size={20} aria-hidden="true" />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={f.url} alt="" className="h-full w-full object-cover" />
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[14px] font-semibold text-[#1c1c1c]">{f.name}</div>
+                <div className="text-[12px] text-[#717171]">{fileSize(f.size)}</div>
+              </div>
+              <button type="button" onClick={() => onRemove(i)} aria-label={`Remove ${f.name}`} className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-[#717171] transition-colors hover:bg-[#f7f7f7] hover:text-[#1c1c1c]">
+                <RiCloseLine size={18} aria-hidden="true" />
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
-
-      <div className="sticky bottom-0 z-20 mt-auto px-5 pb-[max(21px,env(safe-area-inset-bottom))] pt-6">
-        <CardButton onClick={onDone} hint={hint}>
-          Follow @{handle} on Instagram
-        </CardButton>
-        <p className="mx-auto mt-[14px] w-[295.208px] max-w-full -translate-x-[0.5px] text-center text-[13px] leading-[17px] text-[#4a4a4a]">
-          <span className="font-semibold">Benable</span> is an app that connects over 1 million creators with local businesses and brands.
+      {files.length < FILES_MAX && (
+        <label className="mt-3 flex h-[90px] cursor-pointer flex-col items-center justify-center gap-3 rounded-[12px] border border-dashed border-[#717171] bg-[#fcfcfc] px-3 py-3.5 text-[#1c1c1c] transition-colors hover:border-[#7a5cfa] hover:bg-[#fcf9ff] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#7a5cfa]">
+          <RiUpload2Line size={16} aria-hidden="true" />
+          <span className="text-[13px] font-medium">Tap to upload files</span>
+          <input
+            type="file"
+            multiple
+            accept="image/*,application/pdf"
+            className="sr-only"
+            onChange={(e) => {
+              onAdd(Array.from(e.target.files ?? []));
+              e.target.value = "";
+            }}
+          />
+        </label>
+      )}
+      {error && (
+        <p role="alert" className="mt-3 px-1 text-[13.5px] text-[#c23a56]">
+          {error}
         </p>
+      )}
+    </div>
+  );
+}
+
+/* ---------- the opener and thank-you screens share these ---------- */
+
+/* the same Benable cover for every business (their own photo sits on top as the avatar): the soft brand
+   gradient with faint violet doodles, fading to white. Matches the demo's creator page. */
+function Cover({ height, top }: { height: number; top: number }) {
+  return (
+    <div className="pointer-events-none absolute inset-x-0 overflow-hidden" style={{ top, height }} aria-hidden="true">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/img/cover/gradient.png" alt="" className="absolute inset-0 h-full w-full object-cover" />
+      {/* the doodles: the phone's portrait pattern, and a wide version (Higgsfield outpaint of it) for laptops */}
+      <div className="absolute inset-0 bg-[url(/img/cover/pattern-lines.png)] bg-cover bg-top opacity-40 sm:bg-[url(/img/cover/pattern-lines-wide.jpg)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_top,#fff,rgba(255,255,255,0))]" />
+    </div>
+  );
+}
+
+/* the dark strip at the top: "Powered by" and the Benable logo */
+function PoweredBy() {
+  return (
+    <div className="sticky top-0 z-10 flex h-[67px] items-start justify-center bg-[linear-gradient(to_top,rgba(0,0,0,0)_4.753%,rgba(0,0,0,0.3)_74.958%)] px-5 pb-5 pt-3 text-white sm:h-[76px] sm:pt-5">
+      <div className="flex items-center gap-2">
+        <span className="text-[16px] leading-[normal]">Powered by</span>
+        <Logo height={25.115} />
       </div>
     </div>
   );
 }
 
+/* their avatar tucked into a white name pill with the brand gradient as its stroke */
+function Business() {
+  return (
+    <div className="flex flex-col items-center">
+      <span className="relative mb-[-18px] size-20 shrink-0 rounded-full shadow-[0_1px_14px_rgba(0,0,0,0.25)] outline outline-[1.5px] outline-white/50">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={BUSINESS.avatar} alt="" className="size-full rounded-full object-cover" />
+      </span>
+      <span className="relative max-w-full rounded-full border border-transparent px-4 py-1 [background:linear-gradient(#fff,#fff)_padding-box,var(--brand-grad)_border-box]">
+        <span className="block truncate font-display text-[20px] font-medium leading-[normal] text-[#1c1c1c]">{name}</span>
+      </span>
+    </div>
+  );
+}
+
+function Headline({ children }: { children: ReactNode }) {
+  return <h1 className="w-full text-center font-display text-[30px] !font-extrabold uppercase !leading-[26px] !tracking-[-0.5px] text-[#474747]">{children}</h1>;
+}
+
+/* a DM from the business: their avatar and a grey bubble with a tucked bottom-left corner */
+function Bubble({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex items-end gap-2.5 px-5">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={BUSINESS.avatar} alt="" width={32} height={32} className="size-8 shrink-0 rounded-full object-cover" />
+      <p className="min-w-0 flex-1 rounded-[16px] rounded-bl-[4px] bg-[#eef2f5] py-2.5 pl-2.5 pr-[11px] font-[-apple-system,'SF_Pro','SF_Pro_Text','Helvetica_Neue',Inter,sans-serif] text-[14px] leading-[16.7px] tracking-[-0.3px] text-[#0f1316]">
+        {children}
+      </p>
+    </div>
+  );
+}
+
 /*
-  One burst of confetti from behind the business's photo as the thank-you screen opens:
-  paper pops up and out, flutters, then drifts down and fades. Seeded, so every visit throws the same burst.
+  One burst of confetti from behind the business's photo as the thank-you screen opens.
+  Seeded, so every visit throws the same burst.
 */
 const CONFETTI_COLORS = ["#6b4ef0", "#9b87ff", "#22b07d", "#ffc94d", "#ff7aa8", "#4cc3ff"];
 const CONFETTI = (() => {
@@ -1106,8 +1176,31 @@ function Confetti() {
 
 type Bind = { d: Draft; set: <K extends keyof Draft>(k: K, v: Draft[K]) => void };
 
-// iOS-style filled fields: soft grey at rest, white with a violet ring while typing; 17px so Safari never zooms
-const field = "h-[52px] w-full rounded-[14px] bg-[#f2f2f7] px-4 text-[17px] text-ink outline-none transition-[background-color,box-shadow] duration-200 focus:bg-white focus:shadow-[inset_0_0_0_2px_#5035e3]";
+/* the Figma flow's palette (Design Labs 15596:53212): one accent (#7a5cfa), hairline borders (#e3e3e3), two greys of text */
+// outlined fields like the option cards: white with a hairline at rest, pale violet with the accent border while typing; 17px so Safari never zooms
+const field = "h-[52px] w-full rounded-[12px] border border-[#e3e3e3] bg-white px-4 text-[17px] text-[#1c1c1c] outline-none transition-[background-color,border-color] duration-200 focus:border-[#7a5cfa] focus:bg-[#fcf9ff]";
+/* the wrapper version, for a field with an icon or prefix inside it */
+const fieldWithin = "focus-within:border-[#7a5cfa] focus-within:bg-[#fcf9ff]";
+/* an option card: hairline at rest; picked, it takes the accent border, a violet wash and violet title */
+const card = (on: boolean) =>
+  `rounded-[12px] border transition-[background-color,border-color,color] duration-200 ${on ? "border-[#7a5cfa] bg-[#fcf9ff]" : "border-[#e3e3e3] bg-white hover:border-[#cfcfcf]"}`;
+/* a small label over a group of choices, with an optional line under it */
+function Label({ children, sub, className = "" }: { children: ReactNode; sub?: string; className?: string }) {
+  return (
+    <div className={`flex flex-col gap-1 ${className}`}>
+      <div className="text-[14px] font-semibold text-[#1c1c1c]">{children}</div>
+      {sub && <p className="text-[12px] text-[#717171]">{sub}</p>}
+    </div>
+  );
+}
+
+/* the one column everything sits in: the phone's width on a phone, a little wider and centred on a laptop */
+const COLUMN = "mx-auto w-full max-w-[440px] sm:max-w-[560px]";
+/* where the opener's and thank-you's button lives: pinned within thumb reach on a phone, right under the content on a laptop */
+const DOCK = "sticky bottom-0 z-20 mt-auto px-5 pt-6 sm:static sm:mt-12 sm:px-6 sm:pb-16";
+
+/* every full-width call to action, sized and coloured like the opener's "Let's go" */
+const CTA = "relative flex h-12 w-full items-center justify-center gap-2 rounded-[12px] bg-[#7a5cfa] px-4 text-center text-[16px] font-medium leading-[normal] text-white transition-[background-color,transform] duration-200 hover:bg-[#6c4ef0] active:scale-[0.985] focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-[3px] focus-visible:outline-[#b9a8ff]";
 
 function Enter({ i, children, className = "" }: { i: number; children: ReactNode; className?: string }) {
   return (
@@ -1120,8 +1213,8 @@ function Enter({ i, children, className = "" }: { i: number; children: ReactNode
 function Title({ children, sub }: { children: ReactNode; sub?: string }) {
   return (
     <>
-      <h1 className="flow-title !text-[28px]">{children}</h1>
-      {sub && <p className="mt-2.5 text-[16px] leading-relaxed text-ink-2">{sub}</p>}
+      <h1 className="!font-sans text-[26px] !font-bold !leading-[normal] !tracking-normal !text-wrap text-[#15171c] sm:text-[32px]">{children}</h1>
+      {sub && <p className="mt-2 text-[14px] leading-[1.4] text-[#717171]">{sub}</p>}
     </>
   );
 }
@@ -1132,10 +1225,11 @@ function Input({
   onChange,
   invalid = false,
   className = "",
+  autoFocus,
   ...rest
 }: { label: string; value: string; onChange: (v: string) => void; invalid?: boolean; className?: string } & Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "className">) {
   const id = useId();
-  const focus = useContext(AutoFocus);
+  const focus = useContext(AutoFocus) && autoFocus;
   // the label sits in the field like a placeholder, then floats up once there's text or focus
   return (
     <div className={`relative ${className}`}>
@@ -1145,13 +1239,13 @@ function Input({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={invalid || undefined}
-        className={`${field} peer h-[58px] pb-1.5 pt-5 ${invalid ? "!shadow-[inset_0_0_0_2px_#e5536f]" : ""}`}
+        autoFocus={focus}
+        className={`${field} peer h-[58px] pb-1.5 pt-5 ${invalid ? "!border-[#e5536f]" : ""}`}
         {...rest}
-        autoFocus={focus && rest.autoFocus}
       />
       <label
         htmlFor={id}
-        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[17px] text-muted transition-all duration-200 peer-focus:top-[17px] peer-focus:text-[12.5px] peer-[:not(:placeholder-shown)]:top-[17px] peer-[:not(:placeholder-shown)]:text-[12.5px]"
+        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[17px] text-[#aaa] transition-all duration-200 peer-focus:top-[17px] peer-focus:text-[12.5px] peer-[:not(:placeholder-shown)]:top-[17px] peer-[:not(:placeholder-shown)]:text-[12.5px]"
       >
         {label}
       </label>
@@ -1161,76 +1255,110 @@ function Input({
 
 function Area({ label, hint, value, onChange, placeholder, autoFocus, className = "" }: { label: string; hint?: string; value: string; onChange: (v: string) => void; placeholder?: string; autoFocus?: boolean; className?: string }) {
   const id = useId();
-  const focus = useContext(AutoFocus);
+  const focus = useContext(AutoFocus) && autoFocus;
   return (
     <div className={className}>
       {label && (
-        <label htmlFor={id} className="block text-[16px] font-semibold text-ink">
+        <label htmlFor={id} className="block text-[14px] font-semibold text-[#1c1c1c]">
           {label}
         </label>
       )}
-      {hint && <p className="mt-1 text-[14px] leading-snug text-muted">{hint}</p>}
+      {hint && <p className="mt-1 text-[12px] leading-snug text-[#717171]">{hint}</p>}
       <textarea
         id={id}
         aria-label={label || placeholder}
-        autoFocus={focus && autoFocus}
+        autoFocus={focus}
         rows={4}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className={`${field} ${label ? "mt-3" : ""} h-auto min-h-[128px] resize-none py-3.5 leading-snug placeholder:text-muted`}
+        className={`${field} ${label ? "mt-3" : ""} block h-auto min-h-[128px] resize-none py-3.5 text-[16px] leading-snug placeholder:text-[#aaa]`}
       />
     </div>
   );
 }
 
-function Choice({ on, onClick, children, className = "" }: { on: boolean; onClick: () => void; children: ReactNode; className?: string }) {
+/* a chip, like the fee ranges: soft grey with a half-pixel hairline, the accent outline once picked */
+function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button
       type="button"
       role="radio"
       aria-checked={on}
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-2 rounded-[14px] font-semibold transition-[background-color,box-shadow,color] duration-200 ${
-        on ? "bg-[#5035e3]/[0.08] text-[#4429d6] shadow-[inset_0_0_0_2px_#5035e3]" : "bg-[#f2f2f7] text-ink active:bg-[#e9e9f0]"
-      } ${className}`}
+      className={`inline-flex h-[34px] items-center justify-center rounded-[8px] px-2.5 text-[14px] font-medium transition-[background-color,border-color,color] duration-200 ${
+        on ? "border border-[#7a5cfa] bg-[#fefdff] text-[#7a5cfa]" : "border-[0.5px] border-[#e3e3e3] bg-[#f7f7f7] text-[#717171] hover:text-[#1c1c1c]"
+      }`}
     >
-      {on && <RiCheckLine size={17} aria-hidden="true" />}
       {children}
     </button>
   );
 }
 
-function TopBar({ step, onBack, saved, handle }: { step: [number, number, number]; onBack: () => void; saved: boolean; handle: string }) {
-  const [group, at, of] = step;
-  // a native-feeling nav bar: back on the left, where they are in the middle, the business on the right
+/* a full-width option card: bold title (with an optional badge), a line of detail, an icon on the right */
+function Option({ on, onClick, title, badge, icon: Icon, children, role = "radio" }: { on: boolean; onClick: () => void; title: ReactNode; badge?: string; icon?: RemixiconComponentType; children?: ReactNode; role?: "radio" | "checkbox" }) {
   return (
-    <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-xl sm:rounded-t-[32px]">
-      <div className="relative flex h-[52px] items-center px-1.5">
-        <button type="button" onClick={onBack} aria-label="Back" className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink transition-colors active:bg-[#f2f2f7]">
-          <RiArrowLeftSLine size={30} aria-hidden="true" />
+    <button type="button" role={role} aria-checked={on} onClick={onClick} className={`flex w-full items-center gap-2 p-4 text-left ${card(on)}`}>
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="flex items-center gap-2">
+          <span className={`text-[16px] font-bold transition-colors duration-200 ${on ? "text-[#7a5cfa]" : "text-[#1c1c1c]"}`}>{title}</span>
+          {badge && <span className="inline-flex h-[21px] items-center rounded-full bg-[#dcff8b] px-2 text-[12px] font-medium text-[#0f4936]">{badge}</span>}
+        </span>
+        {children && <span className="text-[14px] leading-[normal] text-[#717171]">{children}</span>}
+      </span>
+      {Icon && <Icon size={24} className={`shrink-0 transition-colors duration-200 ${on ? "text-[#7a5cfa]" : "text-[#717171]"}`} aria-hidden="true" />}
+    </button>
+  );
+}
+
+/* the business's tip, on Benable's warm gradient: white text and an info icon */
+function Note({ children }: { children: ReactNode }) {
+  return (
+    <div role="note" className="relative overflow-hidden rounded-[12px]">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/img/creator/note-gradient.png" alt="" className="pointer-events-none absolute left-0 top-[-46%] h-[292%] w-full max-w-none" aria-hidden="true" />
+      <div className="absolute inset-0 bg-black/10 backdrop-blur-[14px]" aria-hidden="true" />
+      <div className="relative flex items-center gap-2 p-4 text-[14px] leading-[normal] text-white">
+        <RiInformationLine size={20} className="shrink-0" aria-hidden="true" />
+        <p className="min-w-0 flex-1">{children}</p>
+      </div>
+    </div>
+  );
+}
+
+function TopBar({ step, onBack, saved }: { step: [number, number, number]; onBack: () => void; saved: boolean }) {
+  const [group, at, of] = step;
+  // a native-feeling nav bar, built to Figma: back on the left, where they are in the middle, the business on the right, then four hairline segments
+  return (
+    <div className="sticky top-0 z-20 bg-white">
+      <div className="relative mx-auto flex h-[52px] w-full max-w-[960px] items-center px-3 sm:h-16 sm:px-6">
+        <button type="button" onClick={onBack} aria-label="Back" className="grid size-8 shrink-0 place-items-center rounded-full text-[#222] transition-colors hover:bg-[#f7f7f7] active:bg-[#f0f0f0]">
+          <RiArrowLeftSLine size={20} aria-hidden="true" />
         </button>
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center leading-tight" aria-label={`Step ${group + 1} of ${GROUPS.length}: ${GROUPS[group]}`}>
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center leading-[normal]" aria-label={`Step ${group + 1} of ${GROUPS.length}: ${GROUPS[group]}`}>
           <AnimatePresence mode="wait" initial={false}>
-            <motion.div key={group} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.2, ease: EASE }}>
-              <div className="text-[16px] font-semibold tracking-[-0.01em] text-ink">{GROUPS[group]}</div>
-              <div className="text-[12px] font-medium text-muted">
+            <motion.div key={group} className="flex flex-col items-center gap-1" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.2, ease: EASE }}>
+              <div className="text-[14px] font-semibold text-[#222]">{GROUPS[group]}</div>
+              <div className="text-[12px] font-medium text-[#aaa]">
                 Step {group + 1} of {GROUPS.length}
               </div>
             </motion.div>
           </AnimatePresence>
         </div>
-        <div className="ml-auto flex items-center gap-1.5 pr-2.5">
-          <span aria-live="polite" className={`text-[12.5px] font-medium text-muted transition-opacity duration-300 ${saved ? "opacity-100" : "opacity-0"}`}>
+        <div className="ml-auto flex items-center gap-2 pr-1 sm:pr-0">
+          <span aria-live="polite" className={`text-[12px] font-medium text-[#aaa] transition-opacity duration-300 ${saved ? "opacity-100" : "opacity-0"}`}>
             {saved ? "Saved" : ""}
           </span>
-          <Avatar handle={handle} size={30} />
+          <span className="size-10 shrink-0 overflow-hidden rounded-full border border-[#ddd] bg-white p-px">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={BUSINESS.avatar} alt="" className="size-full rounded-full object-cover" />
+          </span>
         </div>
       </div>
-      <div className="flex gap-1 px-4 pb-2.5" aria-hidden="true">
+      <div className="mx-auto flex w-full max-w-[960px] gap-1.5 px-6 pb-[14px] pt-[14px] sm:px-8 sm:pb-4" aria-hidden="true">
         {GROUPS.map((g, i) => (
-          <span key={g} className="h-[4px] flex-1 overflow-hidden rounded-full bg-[#ececf2]">
-            <motion.span className="block h-full rounded-full bg-[#5035e3]" initial={false} animate={{ width: i < group ? "100%" : i === group ? `${(at / of) * 100}%` : "0%" }} transition={{ duration: 0.5, ease: EASE }} />
+          <span key={g} className="h-[2px] flex-1 overflow-hidden rounded-full bg-[#ddd]">
+            <motion.span className="block h-full rounded-[8px] bg-[#222]" initial={false} animate={{ width: i < group ? "100%" : i === group ? `${(at / of) * 100}%` : "0%" }} transition={{ duration: 0.5, ease: EASE }} />
           </span>
         ))}
       </div>
@@ -1238,16 +1366,39 @@ function TopBar({ step, onBack, saved, handle }: { step: [number, number, number
   );
 }
 
+/* the steps' button: pinned to the bottom of the window on a phone and a laptop alike, on plain white. The questions
+   scroll behind it, and only while something is under it does a thin grey line show along its top */
 function Footer({ children }: { children: ReactNode }) {
-  return <div className="sticky bottom-0 z-20 mt-auto bg-gradient-to-t from-white from-70% to-white/0 px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-6 sm:rounded-b-[32px]">{children}</div>;
+  const [under, setUnder] = useState(false);
+  const bar = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // something is under the bar while the end of the questions sits below its top edge
+    const check = () => {
+      const end = document.getElementById("flow-end");
+      if (end && bar.current) setUnder(end.getBoundingClientRect().top > bar.current.getBoundingClientRect().top + 0.5);
+    };
+    check();
+    window.addEventListener("scroll", check, { passive: true });
+    window.addEventListener("resize", check);
+    // the page also grows without a scroll (a step sliding in, the fee range opening)
+    const ro = new ResizeObserver(check);
+    ro.observe(document.body);
+    return () => {
+      window.removeEventListener("scroll", check);
+      window.removeEventListener("resize", check);
+      ro.disconnect();
+    };
+  }, []);
+  return (
+    <div ref={bar} className={`sticky bottom-0 z-20 mt-auto w-full border-t bg-white transition-colors duration-200 ${under ? "border-[#e3e3e3]" : "border-transparent"}`}>
+      <div className={`${COLUMN} px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-6 sm:pt-4`}>{children}</div>
+    </div>
+  );
 }
 
 function Primary({ children, busy = false, hint = false, className = "", ...rest }: { children: ReactNode; busy?: boolean; hint?: boolean } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <button
-      {...rest}
-      className={`${CTA} disabled:cursor-not-allowed disabled:bg-[#7a5cfa]/25 disabled:active:scale-100 ${busy ? "cursor-wait" : ""} ${className}`}
-    >
+    <button {...rest} aria-busy={busy || undefined} className={`${CTA} disabled:cursor-not-allowed disabled:bg-[#7a5cfa]/25 disabled:active:scale-100 ${busy ? "cursor-wait" : ""} ${className}`}>
       {busy && <span className="h-[18px] w-[18px] animate-spin rounded-full border-2 border-white/30 border-t-white motion-reduce:animate-none" aria-hidden="true" />}
       {children}
       {hint && <TapHint />}
@@ -1275,47 +1426,8 @@ function TapHint() {
   );
 }
 
-/* the official Instagram app icon (Figma: Design Labs 15529:88516) */
+/* the official Instagram app icon */
 function IgGlyph() {
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src="/img/instagram.svg" alt="" width={28} height={28} className="block" />;
-}
-
-/* "Heads up": nudges anyone skipping Instagram, without blocking them */
-function HeadsUp({ onConnect, onManual, onClose }: { onConnect: () => void; onManual: () => void; onClose: () => void }) {
-  useEffect(() => {
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", esc);
-    return () => document.removeEventListener("keydown", esc);
-  }, [onClose]);
-  return (
-    <motion.div className="fixed inset-0 z-50 flex items-end justify-center sm:absolute sm:rounded-[32px]" initial="hidden" animate="shown" exit="hidden">
-      <motion.div aria-hidden="true" className="absolute inset-0 bg-[#161a35]/30 sm:rounded-[32px]" variants={{ hidden: { opacity: 0 }, shown: { opacity: 1 } }} transition={{ duration: 0.3 }} onClick={onClose} />
-      <motion.div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="headsup-title"
-        className="relative w-full max-w-[460px] rounded-t-[28px] bg-white px-6 pb-[max(20px,env(safe-area-inset-bottom))] pt-3 sm:rounded-b-[32px]"
-        variants={{ hidden: { y: "100%" }, shown: { y: 0 } }}
-        transition={{ duration: 0.45, ease: EASE }}
-      >
-        <div className="mx-auto mb-6 h-1 w-10 rounded-full bg-line" />
-        <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#fff4e0] text-[22px] font-bold text-[#c27a00]" aria-hidden="true">
-          !
-        </span>
-        <h2 id="headsup-title" className="mt-4 text-[24px] text-ink">
-          Heads up
-        </h2>
-        <p className="mt-2 text-[16px] leading-relaxed text-ink-2">Creators who connect their Instagram are 5 times more likely to get a collab.</p>
-        <div className="mt-6">
-          <Primary type="button" onClick={onConnect} autoFocus>
-            <RiInstagramLine size={19} aria-hidden="true" /> Connect Instagram
-          </Primary>
-          <button type="button" onClick={onManual} className={CTA_QUIET}>
-            Enter data manually
-          </button>
-        </div>
-      </motion.div>
-    </motion.div>
-  );
+  return <img src="/img/instagram-logo.svg" alt="" width={28} height={28} className="block" />;
 }

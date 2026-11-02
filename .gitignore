@@ -42,3 +42,9 @@ next-env.d.ts
 
 # local Claude preview config
 .claude/
+
+# creator requests saved in local dev
+/.submissions/
+
+# brainstorm companion sessions
+/.superpowers/

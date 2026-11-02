@@ -54,7 +54,7 @@ export default function Setup() {
   };
 
   return (
-    <main className="relative mx-auto w-full max-w-[600px] px-5 pb-24 pt-[112px] sm:pt-[136px]">
+    <main className="relative mx-auto w-full max-w-[600px] px-5 pb-24 pt-[96px] sm:pt-[112px]">
       <motion.section animate={leaving ? { opacity: 0, y: -12, filter: "blur(6px)" } : undefined} transition={{ duration: 0.45, ease: EASE }}>
         <Rise i={0}>
           <h1 className="moment-title">

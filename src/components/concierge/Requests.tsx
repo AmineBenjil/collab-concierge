@@ -89,7 +89,7 @@ export default function Requests() {
   }, [openId]);
 
   return (
-    <main className="relative mx-auto w-full max-w-[600px] px-5 pb-28 pt-[112px] sm:pt-[140px]">
+    <main className="relative mx-auto w-full max-w-[600px] px-5 pb-28 pt-[96px] sm:pt-[112px]">
       <Rise i={0}>
         <h1 className="dash-title">Requests</h1>
       </Rise>

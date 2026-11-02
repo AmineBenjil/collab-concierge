@@ -298,8 +298,9 @@ h3 { letter-spacing: -0.025em; line-height: 1.15; }
   font-size: 24px;
 }
 @media (min-width: 640px) { .dash-title { font-size: 32px; } }
-/* the creator's request form lives in a phone-width column, so its titles stay one size */
-.flow-title { font-family: var(--font-sans); font-weight: 800; letter-spacing: -0.035em; line-height: 1.06; color: #1c1c1c; text-wrap: balance; font-size: 32px; }
+/* the creator flow's question titles: phone size, a step up on a laptop */
+.flow-title { font-family: var(--font-sans); font-weight: 800; letter-spacing: -0.035em; line-height: 1.06; color: #1c1c1c; text-wrap: balance; font-size: 28px; }
+@media (min-width: 640px) { .flow-title { font-size: 36px; } }
 
 /* browsers paint autofilled fields pale blue; keep our white pills white */
 input:-webkit-autofill,
@@ -309,6 +310,16 @@ input:-webkit-autofill:focus {
   -webkit-text-fill-color: var(--ink);
   caret-color: var(--ink);
   transition: background-color 9999s ease-out;
+}
+/* the background above freezes at whatever it was when autofill landed (white, if the field had focus), so the
+   flow's fields paint their own colour on top: white at rest, pale violet while typing (their border carries the state).
+   Inputs inside a styled wrapper (bg-transparent) stay clear; the wrapper is the field */
+.creator-flow input:-webkit-autofill:not(.bg-transparent),
+.creator-flow input:-webkit-autofill:not(.bg-transparent):hover {
+  -webkit-box-shadow: 0 0 0 1000px #fff inset;
+}
+.creator-flow input:-webkit-autofill:not(.bg-transparent):focus {
+  -webkit-box-shadow: 0 0 0 1000px #fcf9ff inset;
 }
 
 /* pricing receipt: paper cut into a zigzag along the top and bottom edges (each tooth is --zz tall) */

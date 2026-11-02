@@ -8,23 +8,16 @@ import { FRAME_RATIO, PT_H, PT_W, SCREEN, StatusBar } from "../Phone";
 
 /*
   Desktop "see what creators see": the real flow, running in a phone-sized iframe (so it gets a true
-  mobile viewport, its own scrolling and its own sheets) inside the same iPhone 16 Pro frame as the
-  landing page, under the iOS status bar and Chrome's address bar (Design Labs 15526:88239).
+  mobile viewport and its own scrolling) inside the same iPhone 16 Pro frame as the landing page,
+  under the iOS status bar and Chrome's address bar (Design Labs 15526:88239). The phone fills each
+  step in and points at the button to tap. The Customize page's live preview reuses the phone.
 */
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 const CHROME = 94; // status bar plus Chrome's top address bar
 
-export default function PreviewDevice({ handle, draftKey }: { handle: string; draftKey: string }) {
+export default function PreviewDevice({ handle }: { handle: string }) {
   const [run, setRun] = useState(0);
-
-  const restart = () => {
-    try {
-      localStorage.removeItem(draftKey);
-    } catch {}
-    setRun((r) => r + 1);
-  };
-
   const share = `/share?handle=${encodeURIComponent(handle)}`;
 
   return (
@@ -48,7 +41,7 @@ export default function PreviewDevice({ handle, draftKey }: { handle: string; dr
             <Link href={share} className="inline-flex h-12 items-center gap-2 rounded-full bg-ink px-5 text-[15px] font-semibold text-white transition-colors hover:bg-black">
               <RiArrowLeftLine size={17} aria-hidden="true" /> Back to your Concierge
             </Link>
-            <button type="button" onClick={restart} className="inline-flex h-12 items-center gap-2 rounded-full px-5 text-[15px] font-semibold text-ink-2 transition-colors hover:bg-white/70">
+            <button type="button" onClick={() => setRun((r) => r + 1)} className="inline-flex h-12 items-center gap-2 rounded-full px-5 text-[15px] font-semibold text-ink-2 transition-colors hover:bg-white/70">
               <RiRefreshLine size={17} aria-hidden="true" /> Start over
             </button>
           </div>

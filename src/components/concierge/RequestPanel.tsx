@@ -1,12 +1,13 @@
 "use client";
 
-import { RiArrowGoBackLine, RiArrowRightLine, RiCheckLine } from "@remixicon/react";
+import { RiArrowRightLine, RiCheckLine, RiSparkling2Fill } from "@remixicon/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode, type RefObject } from "react";
-import { forwardMessage, longDate, type Check, type Creator, type Fit, type Social, type Status } from "./data";
+import { forwardMessage, shortDate, type Check, type Creator, type Fit, type Social, type Status } from "./data";
 import { useToast } from "./Shell";
 import { getDeclineMessage, saveDeclineMessage } from "./store";
 import { BrandIcon } from "../Logo";
+import Proposal, { PROPOSAL_VERSIONS, ProposalSwitcher, type ProposalVersion } from "./Proposal";
 import { copyText, EASE } from "./ui";
 
 type Props = {
@@ -35,6 +36,21 @@ export default function RequestPanel(props: Props) {
      compact: the bio is about to slide under it, so the header takes over the name */
   const [scrolled, setScrolled] = useState(false);
   const [compact, setCompact] = useState(false);
+  /* which "Their proposal" design is showing, kept per browser while Tony compares them */
+  const [version, setVersion] = useState<ProposalVersion>(() => {
+    try {
+      const saved = localStorage.getItem("proposal-version");
+      return PROPOSAL_VERSIONS.find((v) => v.id === saved)?.id ?? "deal";
+    } catch {
+      return "deal";
+    }
+  });
+  const pick = (v: ProposalVersion) => {
+    setVersion(v);
+    try {
+      localStorage.setItem("proposal-version", v);
+    } catch {}
+  };
 
   /* hold the page still underneath, start keyboard focus on the panel, give it back on close */
   useEffect(() => {
@@ -113,6 +129,7 @@ export default function RequestPanel(props: Props) {
           <Body
             key={creator.id}
             {...props}
+            version={version}
             onScrollState={(s, c) => {
               setScrolled(s);
               setCompact(c);
@@ -120,12 +137,19 @@ export default function RequestPanel(props: Props) {
           />
         </AnimatePresence>
       </motion.aside>
+      <motion.div
+        className="absolute left-[calc(50%+290px)] top-1/2 hidden -translate-y-1/2 xl:block"
+        variants={{ hidden: { opacity: 0, x: -8 }, shown: { opacity: 1, x: 0 } }}
+        transition={{ duration: 0.4, ease: EASE, delay: 0.1 }}
+      >
+        <ProposalSwitcher value={version} onChange={pick} />
+      </motion.div>
     </motion.div>
   );
 }
 
 /* keyed by creator, so stepping to the next one starts fresh at the top */
-function Body({ creator: c, status, business, onPrev, onNext, onClose, onDecide, onScrollState }: Props & { onScrollState: (scrolled: boolean, compact: boolean) => void }) {
+function Body({ creator: c, status, business, version, onPrev, onNext, onClose, onDecide, onScrollState }: Props & { version: ProposalVersion; onScrollState: (scrolled: boolean, compact: boolean) => void }) {
   const [sheet, setSheet] = useState<null | "decline" | "forward">(null);
   const scroller = useRef<HTMLDivElement>(null);
   const bio = useRef<HTMLParagraphElement>(null);
@@ -167,21 +191,25 @@ function Body({ creator: c, status, business, onPrev, onNext, onClose, onDecide,
 
   return (
     <motion.div className="flex min-h-0 flex-1 flex-col" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
-      <div ref={scroller} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain">
-        <FitChecker creator={c} status={status} />
-        <Profile creator={c} bioRef={bio} />
-        <Proposal creator={c} />
-        <Review creator={c} />
-        <Section>
-          <div className="flex flex-col gap-3">
-            <Heading>Contact</Heading>
-            <Contacts creator={c} />
-          </div>
-        </Section>
-        <Feedback />
+      {/* the scroller is white and the grey gaps are drawn by the column inside it, so a
+          trackpad bounce past either end stretches white instead of opening a grey band */}
+      <div ref={scroller} className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-white">
+        <div className="flex shrink-0 flex-col gap-3 bg-[#f2f2f2]">
+          <FitChecker creator={c} status={status} />
+          <Profile creator={c} bioRef={bio} />
+          <Proposal creator={c} version={version} />
+          <Review creator={c} />
+          <Section>
+            <div className="flex flex-col gap-3">
+              <Heading>Contact</Heading>
+              <Contacts creator={c} />
+            </div>
+          </Section>
+          <Feedback />
+        </div>
       </div>
 
-      <Footer creator={c} status={status} onNext={onNext} onDecide={onDecide} onOpen={setSheet} />
+      <Footer creator={c} status={status} onNext={onNext} onOpen={setSheet} />
 
       <AnimatePresence>
         {sheet === "decline" && (
@@ -260,20 +288,20 @@ function Rich({ text }: { text: string }) {
 }
 
 const SOCIAL: Record<Social, { label: string; href: (h: string) => string; icon: string }> = {
-  instagram: { label: "Instagram", href: (h) => `https://www.instagram.com/${h}`, icon: "/img/instagram.svg" },
+  instagram: { label: "Instagram", href: (h) => `https://www.instagram.com/${h}`, icon: "/img/instagram-logo.svg" },
   tiktok: { label: "TikTok", href: (h) => `https://www.tiktok.com/@${h}`, icon: "/img/request/tiktok.svg" },
 };
 
 function Socials({ list, handle }: { list: Social[]; handle: string }) {
   return (
-    <ul className="flex h-6 shrink-0 items-center gap-3" aria-label="Social accounts">
+    <ul className="flex h-8 shrink-0 items-center gap-3" aria-label="Social accounts">
       {list.map((s) => {
         const { label, href, icon } = SOCIAL[s];
         return (
           <li key={s}>
-            <a href={href(handle)} target="_blank" rel="noreferrer" title={label} className="block size-6 transition-opacity hover:opacity-80">
+            <a href={href(handle)} target="_blank" rel="noreferrer" title={label} className="block size-8 transition-opacity hover:opacity-80">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={icon} alt={label} width={24} height={24} />
+              <img src={icon} alt={label} width={32} height={32} />
             </a>
           </li>
         );
@@ -346,7 +374,7 @@ function Profile({ creator: c, bioRef }: { creator: Creator; bioRef: RefObject<H
             >
               <span className="flex items-center gap-1">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/img/instagram.svg" alt="Instagram" width={13} height={13} />
+                <img src="/img/instagram-logo.svg" alt="Instagram" width={13} height={13} />
                 {c.engagement}
               </span>
             </Stat>
@@ -400,10 +428,10 @@ const ARCS: { from: number; to: number; pale: string }[] = [
   { from: -39.75, to: 29.98, pale: "#D8EDDB" },
 ];
 
-const GAUGE: Record<Fit, { label: string; arc: number; color: string; needle: number; box: string; boxText: string; pill: string }> = {
-  strong: { label: "Strong fit", arc: 2, color: "#3CA44F", needle: 7.48, box: "#f2fef7", boxText: "#3f5c3a", pill: "#3ca44f" },
-  maybe: { label: "Maybe", arc: 1, color: "#E9A23B", needle: -90, box: "#fff9ef", boxText: "#6b4b16", pill: "#e9a23b" },
-  no: { label: "Not a fit", arc: 0, color: "#E5484D", needle: 175.2, box: "#fff4f5", boxText: "#7d2f39", pill: "#e5484d" },
+const GAUGE: Record<Fit, { label: string; arc: number; color: string; text: string; needle: number; pill: string }> = {
+  strong: { label: "Strong fit", arc: 2, color: "#3CA44F", text: "#2e8a3f", needle: 7.48, pill: "#3ca44f" },
+  maybe: { label: "Maybe", arc: 1, color: "#E9A23B", text: "#a8650a", needle: -90, pill: "#e9a23b" },
+  no: { label: "Not a fit", arc: 0, color: "#E5484D", text: "#c4314b", needle: 175.2, pill: "#e5484d" },
 };
 
 const CX = 47.455;
@@ -457,71 +485,54 @@ function Gauge({ fit }: { fit: Fit }) {
   );
 }
 
-/* the redesigned fit checker (Design Labs 15523:18381), first thing in the dialog:
-   the Benable tile and verdict beside a small gauge, then the one-line reason */
+/* the fit checker, first thing in the dialog: one white card with the Benable tile and
+   verdict beside the gauge, a hairline, then the Concierge's one-line take */
 function FitChecker({ creator: c, status }: { creator: Creator; status: Status }) {
   const g = GAUGE[c.fit];
   const decided = status === "forward" ? " · Interested" : status === "declined" ? " · Declined" : "";
   return (
-    <section className="flex shrink-0 flex-col gap-6 bg-white px-6 pb-6">
+    <section className="flex shrink-0 flex-col gap-5 bg-white px-6 pb-6">
       <div className="flex h-[60px] items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <BrandIcon size={48} className="!rounded-[8px]" />
+          <BrandIcon size={48} className="!rounded-[12px]" />
           <div className="flex min-w-0 flex-col gap-1">
-            <p className="text-[16px] font-semibold leading-[normal]" style={{ color: g.color }}>
+            <p className="text-[18px]/[22px] font-semibold tracking-[-0.01em]" style={{ color: g.text }}>
               {g.label}
             </p>
-            <p className="truncate text-[12px]/[16px] text-[#717171]">
-              Collab requested {longDate(c.requested)}
+            <p className="truncate text-[13px]/[16px] text-[#717171]">
+              Requested {shortDate(c.requested)}
               {decided}
             </p>
           </div>
         </div>
         <Gauge fit={c.fit} />
       </div>
-      <p className="rounded-[12px] border-[0.5px] border-[#e3e3e3] px-[25px] py-[11px] text-center text-[16px] leading-[normal]" style={{ background: g.box, color: g.boxText }}>
-        {c.verdict}
-      </p>
+      <div className="h-px bg-[#ececec]" />
+      <div className="flex flex-col gap-2">
+        <p className="flex items-center gap-2 text-[14px]/[18px] font-semibold text-[#1c1c1c]">
+          <RiSparkling2Fill size={18} aria-hidden="true" className="text-[#7a5cfa]" />
+          Concierge&apos;s take
+        </p>
+        <p className="text-[15px]/[22px] text-[#3e3e3e]">{c.verdict}</p>
+      </div>
     </section>
   );
 }
 
 /* an icon, a bold label, and the value tucked under it */
-function Row({ icon, label, children }: { icon: string; label: string; children: ReactNode }) {
+function Row({ icon, label, note, children }: { icon: string; label: string; note?: string; children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
       <div className="flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={icon} alt="" width={20} height={20} className="shrink-0" />
-        <span className="text-[14px]/[17px] font-semibold text-[#1c1c1c]">{label}</span>
+        <span className="text-[14px]/[17px] font-semibold text-[#1c1c1c]">
+          {label}
+          {note && <span className="font-normal text-[#717171]"> ({note})</span>}
+        </span>
       </div>
       <div className="pl-8 text-[14px]/[17px] text-[#717171]">{children}</div>
     </div>
-  );
-}
-
-/* "Their proposal" (Design Labs 15524:60982): each answer from the creator's form under its question */
-function Proposal({ creator: c }: { creator: Creator }) {
-  const rows = [
-    { label: "What they'd create or do for you", value: c.proposal.create },
-    { label: "What they'd like from you", value: c.proposal.want },
-    ...(c.proposal.extra ? [{ label: "Anything else", value: c.proposal.extra }] : []),
-    { label: "Payment", value: c.proposal.payment, warn: c.proposal.payment.startsWith("Yes") },
-  ];
-  return (
-    <section className="flex shrink-0 flex-col gap-4 bg-white p-6">
-      <h3 className="text-[16px]/[16px] font-bold text-[#1c1c1c]">Their proposal</h3>
-      {rows.map((r) => (
-        <div key={r.label} className="flex flex-col gap-2">
-          <p className="text-[14px]/[16px] font-medium text-[#1c1c1c]">{r.label}</p>
-          <p
-            className={`rounded-[8px] border-[0.5px] border-[#e3e3e3] bg-[#f4f4f4] p-3 text-[14px] leading-[normal] shadow-[0_4px_32px_0_rgba(0,0,0,0.04)] ${r.warn ? "font-medium text-[#c23a56]" : "text-[#717171]"}`}
-          >
-            {r.value}
-          </p>
-        </div>
-      ))}
-    </section>
   );
 }
 
@@ -590,20 +601,26 @@ function CopyLink({ text, label }: { text: string; label: string }) {
 }
 
 function Contacts({ creator: c, className = "" }: { creator: Creator; className?: string }) {
-  const rows: { label: string; value: string; href?: string; icon: string }[] = [{ label: "Email", value: c.email, href: `mailto:${c.email}`, icon: "/img/request/email.svg" }];
+  const rows: { label: string; value: string; href?: string; icon: string; note?: string }[] = [{ label: "Email", value: c.email, href: `mailto:${c.email}`, icon: "/img/request/email.svg" }];
   if (c.phone) rows.push({ label: "Phone", value: c.phone, href: `tel:${c.phone.replace(/[^\d+]/g, "")}`, icon: "/img/request/phone.svg" });
   rows.push({ label: "Instagram", value: `@${c.handle}`, href: `https://www.instagram.com/${c.handle}`, icon: "/img/request/instagram.svg" });
+  /* what they typed for "Where are you based?" in the creator flow */
+  if (c.proposal.based && c.proposal.based !== "Not stated") rows.push({ label: "Address", note: "for shipping", value: c.proposal.based, icon: "/img/request/based.svg" });
 
   return (
     <ul className={`flex flex-col items-center gap-0.5 rounded-[12px] outline-solid outline-[0.5px] -outline-offset-[0.5px] outline-[#e3e3e3] bg-[#fafafa] px-3 py-1 ${className}`}>
-      {rows.map(({ label, value, href, icon }, i) => (
+      {rows.map(({ label, value, href, icon, note }, i) => (
         <li key={label} className="contents">
           {i > 0 && <Rule src="rule-contact" />}
           <div className="flex w-full items-center justify-between gap-3 py-2">
-            <Row icon={icon} label={label}>
-              <a href={href} target={href?.startsWith("http") ? "_blank" : undefined} rel="noreferrer" className="block truncate underline-offset-4 hover:underline">
-                {value}
-              </a>
+            <Row icon={icon} label={label} note={note}>
+              {href ? (
+                <a href={href} target={href.startsWith("http") ? "_blank" : undefined} rel="noreferrer" className="block truncate underline-offset-4 hover:underline">
+                  {value}
+                </a>
+              ) : (
+                <span className="block truncate">{value}</span>
+              )}
             </Row>
             <CopyLink text={value} label={label.toLowerCase()} />
           </div>
@@ -666,16 +683,10 @@ function Feedback() {
 const soft = "inline-flex h-10 items-center justify-center gap-1.5 rounded-[11px] bg-[#f1f1f1] px-4 text-[14.5px] font-medium leading-[21.75px] text-[#161a35] transition-colors hover:bg-[#e8e8e8]";
 const solid = "inline-flex h-10 items-center justify-center gap-1.5 rounded-[11px] bg-[#7a5cfa] px-4 text-[14.5px] font-medium leading-[21.75px] text-white transition-[background-color,transform] duration-200 hover:bg-[#6c4ef0] active:scale-[0.985]";
 
-function Footer({ creator: c, status, onNext, onDecide, onOpen }: { creator: Creator; status: Status; onNext?: () => void; onDecide: Props["onDecide"]; onOpen: (s: "decline" | "forward") => void }) {
+function Footer({ creator: c, status, onNext, onOpen }: { creator: Creator; status: Status; onNext?: () => void; onOpen: (s: "decline" | "forward") => void }) {
   const next = onNext && (
     <button type="button" onClick={onNext} aria-label="Next request" className={`${soft} !px-3`}>
       <RiArrowRightLine size={17} aria-hidden="true" />
-    </button>
-  );
-  const back = (
-    <button type="button" onClick={() => onDecide("new")} className={soft}>
-      <RiArrowGoBackLine size={15} aria-hidden="true" />
-      Back to New
     </button>
   );
 
@@ -692,7 +703,6 @@ function Footer({ creator: c, status, onNext, onDecide, onOpen }: { creator: Cre
         </>
       ) : status === "forward" ? (
         <>
-          {back}
           <a href={`mailto:${c.email}`} className={`${solid} ml-auto`}>
             Email {c.first}
           </a>
@@ -701,7 +711,6 @@ function Footer({ creator: c, status, onNext, onDecide, onOpen }: { creator: Cre
       ) : (
         <>
           <span className="mr-auto min-w-0 truncate text-[13.5px] text-[#717171]">Declined. Your message went out.</span>
-          {back}
           {next}
         </>
       )}
