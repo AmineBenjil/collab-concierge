@@ -48,11 +48,18 @@ type Side = "creators" | "concierge";
 type Stage = "welcome" | "asked" | "yours" | "thanks";
 type Editing = { q: Question; isNew: boolean } | null;
 
-/* phones get the short labels, so both fit the switch */
-const SIDES: { id: Side; label: string; short: string }[] = [
-  { id: "creators", label: "What creators see", short: "Creators see" },
-  { id: "concierge", label: "What your Concierge knows", short: "Concierge knows" },
+const SIDES: { id: Side; label: string }[] = [
+  { id: "creators", label: "Creators view" },
+  { id: "concierge", label: "My Concierge" },
 ];
+/* what heads the left side of the sheet */
+const HEADS: Record<Side, { title: string; sub: string }> = {
+  creators: { title: "Your creator link 🔗", sub: "Edit what creators see when they open your link, and teach your Concierge who you’re looking for." },
+  concierge: {
+    title: "Brief your Concierge 📝",
+    sub: "Put any context or information here, and write it however you like. The headings are just there to help you, but your Concierge takes in all of it.",
+  },
+};
 const STAGES: { id: Stage; label: string }[] = [
   { id: "welcome", label: "Welcome message" },
   { id: "asked", label: "Questions we always ask" },
@@ -85,8 +92,8 @@ const PANEL = "bg-white px-5 py-5 sm:px-6";
 const BOX = "overflow-hidden rounded-[16px] border-[0.5px] border-[#e3e3e3] bg-[#fafafa]";
 const HEADING = "text-[14px] font-semibold leading-4 text-[#1c1c1c]";
 const HINT = "text-[13px] leading-snug text-muted";
-/* the controls stop growing on wide screens and sit centred in their side */
-const COLUMN = "mx-auto max-w-[720px]";
+/* the controls stop growing on wide screens */
+const COLUMN = "max-w-[700px]";
 /* text fields: light grey at rest; white with the purple stroke and a soft glow while typing */
 const FIELD =
   "w-full rounded-[16px] border-[0.5px] border-[#e3e3e3] bg-[#fafafa] px-4 text-[15px] text-ink outline-none transition-[background-color,box-shadow,border-color] duration-200 placeholder:text-muted focus:border-transparent focus:bg-white focus:shadow-[inset_0_0_0_2px_#8f7cf7,0_0_0_4px_rgba(143,124,247,0.14)]";
@@ -96,6 +103,7 @@ export default function Customize() {
   const custom = useCustom(handle);
   const say = useToast();
   const frame = useRef<HTMLIFrameElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
 
   const [side, setSide] = useState<Side>("creators");
   const [pos, setPos] = useState(0);
@@ -126,11 +134,12 @@ export default function Customize() {
   const stage = stageOf(seq[at]);
   const firstOf: Record<Stage, number> = { welcome: 0, asked: ASKED_AT, yours: YOURS_AT, thanks: seq.length - 1 };
 
-  /* opening or closing a question swaps the whole column, so it starts from the top */
+  /* opening or closing a question, or switching sides, swaps the whole column, so it starts from the top */
   const open = !!editing;
   useEffect(() => {
     window.scrollTo({ top: 0 });
-  }, [open]);
+    scroller.current?.scrollTo({ top: 0 });
+  }, [open, side]);
 
   /* what the phone shows: the question being edited, else wherever the list or the stepper is */
   const screen: Screen = (() => {
@@ -173,138 +182,139 @@ export default function Customize() {
   };
 
   const intro = !swapped;
+  const view = side === "concierge" ? "concierge" : editing ? "edit" : "creators";
+  const head = HEADS[side];
   return (
-    /* laptops split the screen under the app bar, the way a map view does: the controls scroll on the left 70%,
-       the stage is fixed on the right 30%, a shade darker behind a hairline that matches the bar's */
-    <main className="relative mx-auto w-full max-w-[600px] px-5 pb-24 pt-[96px] sm:pt-[112px] lg:max-w-none lg:p-0 lg:pt-[65px]">
-      <div className="min-w-0 lg:w-[70%] lg:px-12 lg:pb-24 lg:pt-12">
-        <AnimatePresence mode="wait" initial={false}>
-          {editing ? (
-            <Swap key="edit" className={COLUMN}>
-              <QuestionEditor
-                intro={intro}
-                q={editing.q}
-                isNew={editing.isNew}
-                onChange={(q) => setEditingState({ ...editing, q })}
-                onCancel={() => setEditing(null)}
-                onSave={saveQuestion}
-                onDelete={removeQuestion}
-              />
-            </Swap>
-          ) : (
-            <Swap key="overview" className={COLUMN}>
-              <In intro={intro} i={0}>
-                <div className="flex items-end justify-between gap-4">
-                  <h1 className="dash-title">
-                    Make it <span className="grad-text">yours.</span>
-                  </h1>
-                  {/* a quiet tick each time a change lands; the slot is always there so nothing shifts */}
-                  <span aria-live="polite" className={`mb-1 inline-flex items-center gap-1 text-[13px] font-semibold text-[#178a60] transition-opacity duration-300 ${saved ? "opacity-100" : "opacity-0"}`}>
-                    <RiCheckLine size={15} aria-hidden="true" />
-                    {saved ? "Saved" : ""}
-                  </span>
-                </div>
-                <p className="mt-3 text-[15.5px] leading-relaxed text-ink-2">Edit what creators see when they open your link, and teach your Concierge who you’re looking for.</p>
-              </In>
+    /* laptops get one sheet under the switch, split in two and running off the bottom of the window: the
+       details scroll inside the grey left side, the preview stays put on the white right side, so the page
+       itself never scrolls. Below laptop width it's one column and the page scrolls as usual */
+    <main className="relative mx-auto w-full max-w-[600px] px-5 pb-24 pt-[88px] sm:pt-[96px] lg:flex lg:h-svh lg:max-w-[1600px] lg:flex-col lg:px-12 lg:pb-0 lg:pt-[65px]">
+      {/* a pill switch: a light track with a hairline, the white thumb sliding inside it */}
+      <Rise i={0} className="flex justify-center lg:pt-8">
+        <div
+          role="tablist"
+          aria-label="Customize"
+          className="relative flex w-full rounded-full bg-[#f1f1f5] p-1 shadow-[inset_0_0_0_1px_#e8e8ee] sm:w-[400px]"
+        >
+          <Thumb selected={side} />
+          {SIDES.map((s) => {
+            const on = s.id === side;
+            return (
+              <button
+                key={s.id}
+                role="tab"
+                id={`tab-${s.id}`}
+                aria-selected={on}
+                aria-controls="customize-panel"
+                type="button"
+                onClick={() => {
+                  setSwapped(true);
+                  setSide(s.id);
+                }}
+                className={`relative h-11 flex-1 basis-0 whitespace-nowrap rounded-full px-2 text-[14.5px] font-medium transition-colors duration-200 ${on ? "text-ink" : "text-muted hover:text-ink"}`}
+              >
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
+      </Rise>
 
-              {/* the Requests page's switch: cooler grey track with a soft inset, so the white thumb stands out */}
-              <In intro={intro} i={1} className="mt-6">
-                <div role="tablist" aria-label="Customize" className="relative flex rounded-[14px] bg-[#eef0f3] p-1 shadow-[inset_0_1px_2px_rgba(15,20,40,0.06)]">
-                  <Thumb selected={side} rounded="rounded-[10px]" />
-                  {SIDES.map((s) => {
-                    const on = s.id === side;
-                    return (
-                      <button
-                        key={s.id}
-                        role="tab"
-                        id={`tab-${s.id}`}
-                        aria-selected={on}
-                        aria-controls="customize-panel"
-                        type="button"
-                        onClick={() => setSide(s.id)}
-                        className={`relative flex h-10 flex-1 basis-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] px-2 text-[13px] font-medium sm:text-[14px] transition-colors duration-200 ${on ? "text-ink" : "text-muted hover:text-ink"}`}
-                      >
-                        {s.id === "concierge" && <RiSparkling2Fill size={14} aria-hidden="true" className={`relative transition-colors duration-200 ${on ? "text-[#7a5cfa]" : ""}`} />}
-                        <span className="relative sm:hidden">{s.short}</span>
-                        <span className="relative hidden sm:inline">{s.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </In>
+      <Rise i={1} className="mt-6 lg:mt-7 lg:flex lg:min-h-0 lg:flex-1">
+        {/* a white sheet: the details sit on plain white, the preview on a faintly lilac canvas with a dot grid,
+            the way a design tool frames what you're making. Phones skip the sheet's chrome, so the steps keep
+            the full width */}
+        <div className="sm:overflow-hidden sm:rounded-[28px] sm:border sm:border-[#ebeaf2] sm:bg-white sm:shadow-[0_1px_2px_rgba(40,30,110,0.04),0_24px_60px_-40px_rgba(40,30,110,0.25)] lg:grid lg:w-full lg:grid-cols-[minmax(0,60fr)_minmax(0,40fr)] lg:grid-rows-[minmax(0,1fr)] lg:rounded-b-none lg:border-b-0">
+          <div ref={scroller} id="customize-panel" role="tabpanel" aria-labelledby={`tab-${side}`} className="min-w-0 pt-2 sm:px-8 sm:pb-8 sm:pt-7 lg:overflow-y-auto lg:px-16 lg:pb-16 lg:pt-14">
+            <AnimatePresence mode="wait" initial={false}>
+              <Swap key={view} className={COLUMN}>
+                {view === "edit" && editing ? (
+                  <QuestionEditor
+                    intro={false}
+                    q={editing.q}
+                    isNew={editing.isNew}
+                    onChange={(q) => setEditingState({ ...editing, q })}
+                    onCancel={() => setEditing(null)}
+                    onSave={saveQuestion}
+                    onDelete={removeQuestion}
+                  />
+                ) : (
+                  <>
+                    <In intro={intro} i={2}>
+                      <div className="flex items-start justify-between gap-4">
+                        <h2 id="customize-title" className="text-[22px] font-semibold! leading-[1.25]! tracking-[-0.02em]! text-ink">
+                          {head.title}
+                        </h2>
+                        {/* a quiet tick each time a change lands; the slot is always there so nothing shifts */}
+                        <span aria-live="polite" className={`mt-1.5 inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-[#178a60] transition-opacity duration-300 ${saved ? "opacity-100" : "opacity-0"}`}>
+                          <RiCheckLine size={15} aria-hidden="true" />
+                          {saved ? "Saved" : ""}
+                        </span>
+                      </div>
+                      <p className="mt-3 max-w-[560px] text-[15px] leading-[1.6] text-ink-2">{head.sub}</p>
+                    </In>
+                    <In intro={intro} i={3} className="mt-8">
+                      {view === "creators" ? (
+                        <Flow
+                          handle={handle}
+                          custom={custom}
+                          stage={stage}
+                          screen={seq[at]}
+                          onStage={(s) => setPos(firstOf[s])}
+                          onScreen={setPos}
+                          onWelcome={(welcome) => update({ welcome })}
+                          onThanks={(thanks) => update({ thanks })}
+                          onGifted={(gifted) => {
+                            update({ gifted });
+                            setPos(ASKED_AT + ALWAYS_ASKED.findIndex((a) => a.step === "payment"));
+                          }}
+                          onEdit={(q) => setEditing({ q, isNew: false })}
+                          onAdd={() => setEditing({ q: newQuestion(), isNew: true })}
+                          onConcierge={() => {
+                            setSwapped(true);
+                            setSide("concierge");
+                          }}
+                        />
+                      ) : (
+                        <>
+                          <Brief labelledBy="customize-title" brief={custom.brief} onChange={(brief) => update({ brief })} />
+                          {/* no room beside it under laptop width, so the chat follows the brief */}
+                          <div className="mt-6 lg:hidden">
+                            <ConciergeChat />
+                          </div>
+                        </>
+                      )}
+                    </In>
+                  </>
+                )}
+              </Swap>
+            </AnimatePresence>
+          </div>
 
-              <In intro={intro} i={2} className="mt-6">
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.section
-                    key={side}
-                    id="customize-panel"
-                    role="tabpanel"
-                    aria-labelledby={`tab-${side}`}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    transition={{ duration: 0.22, ease: EASE }}
-                  >
-                    {side === "creators" ? (
-                      <Flow
-                        handle={handle}
-                        custom={custom}
-                        stage={stage}
-                        screen={seq[at]}
-                        onStage={(s) => setPos(firstOf[s])}
-                        onScreen={setPos}
-                        onWelcome={(welcome) => update({ welcome })}
-                        onThanks={(thanks) => update({ thanks })}
-                        onGifted={(gifted) => {
-                          update({ gifted });
-                          setPos(ASKED_AT + ALWAYS_ASKED.findIndex((a) => a.step === "payment"));
-                        }}
-                        onEdit={(q) => setEditing({ q, isNew: false })}
-                        onAdd={() => setEditing({ q: newQuestion(), isNew: true })}
-                        onConcierge={() => setSide("concierge")}
-                      />
-                    ) : (
-                      <>
-                        <Brief brief={custom.brief} onChange={(brief) => update({ brief })} />
-                        {/* no room beside it under laptop width, so the chat follows the brief */}
-                        <div className="mt-6 lg:hidden">
-                          <ConciergeChat />
-                        </div>
-                      </>
-                    )}
-                  </motion.section>
-                </AnimatePresence>
-              </In>
-            </Swap>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* the stage: fixed to the window rather than sticky, so scrolling (bounces included) never moves it.
-          Creators never see the brief, so on that side the phone steps aside for the chat, staying loaded
-          for the way back */}
-      <div className="fixed bottom-0 right-0 top-[65px] hidden w-[30%] border-l border-[#e9e9ef] bg-[#f3f3f6] lg:block">
-        <Rise i={1} className="flex h-full flex-col items-center justify-center px-10 py-8">
-          <aside aria-label="Live preview" className={`flex flex-col items-center ${side === "creators" ? "" : "hidden"}`}>
-            {/* as tall as the window allows, and never wider than the stage */}
-            <CreatorPhone
-              frameRef={frame}
-              src={`/c/${encodeURIComponent(handle)}?embed=1&customize=1`}
-              className="h-[min(720px,calc(100svh-210px),calc((30vw-80px)*2))] min-h-[420px]"
-            />
-            {editing ? (
-              <p className="mt-3 flex h-[50px] items-center text-[13px] text-muted">Live preview of what creators see</p>
-            ) : (
-              <Stepper label={STAGES.find((s) => s.id === stage)!.label} at={at} total={seq.length} onGo={setPos} />
-            )}
-          </aside>
-          {side === "concierge" && (
-            <div className="w-full max-w-[380px]">
-              <ConciergeChat />
+          {/* the stage. Creators never see the brief, so on that side the phone steps aside for the chat,
+              staying loaded for the way back */}
+          <div className="relative hidden border-l border-[#ebeaf2] bg-[#f8f7fc] lg:flex lg:flex-col lg:items-center lg:justify-center lg:px-10 lg:py-8">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+              <div className="dot-grid absolute inset-0 opacity-60" />
+              <div className="absolute inset-0 bg-[radial-gradient(closest-side_at_50%_48%,rgba(143,108,247,0.14),rgba(242,134,154,0.05)_65%,transparent)]" />
             </div>
-          )}
-        </Rise>
-      </div>
+            <aside aria-label="Live preview" className={`relative flex flex-col items-center ${side === "creators" ? "" : "hidden"}`}>
+              {/* as tall as the sheet allows */}
+              <CreatorPhone frameRef={frame} src={`/c/${encodeURIComponent(handle)}?embed=1&customize=1`} className="h-[min(700px,calc(100svh-300px))] min-h-[400px]" />
+              {editing ? (
+                <p className="mt-3 flex h-[50px] items-center text-[13px] text-muted">Live preview of what creators see</p>
+              ) : (
+                <Stepper label={STAGES.find((s) => s.id === stage)!.label} at={at} total={seq.length} onGo={setPos} />
+              )}
+            </aside>
+            {side === "concierge" && (
+              <div className="relative w-full max-w-[400px]">
+                <ConciergeChat />
+              </div>
+            )}
+          </div>
+        </div>
+      </Rise>
     </main>
   );
 }
@@ -370,6 +380,37 @@ function Flow({
 }) {
   const qs = custom.questions;
   const full = qs.length >= MAX_QUESTIONS;
+
+  /* while a stage opens, the view follows it down if it would run past the bottom edge, frame by frame so
+     the scroll moves with the opening rather than after it. It never pushes the stage's top out of view, and
+     a stage that already fits stays where it is. Not on arrival, only when it changes */
+  const list = useRef<HTMLOListElement>(null);
+  const shown = useRef(stage);
+  useEffect(() => {
+    if (shown.current === stage) return;
+    shown.current = stage;
+    const el = list.current?.querySelector<HTMLElement>(`[data-stage="${stage}"]`);
+    if (!el) return;
+    const panel = window.matchMedia("(min-width: 1024px)").matches ? document.getElementById("customize-panel") : null;
+    const GAP = 32;
+    const end = performance.now() + 700;
+    let raf = 0;
+    const follow = () => {
+      const box = el.getBoundingClientRect();
+      const top = panel ? panel.getBoundingClientRect().top : 64;
+      const bottom = panel ? panel.getBoundingClientRect().bottom : innerHeight;
+      const over = Math.min(box.bottom + GAP - bottom, box.top - (top + GAP));
+      // eases toward the target each frame, so even a stage that starts below the edge glides up
+      const step = over > 0.5 ? Math.max(over * 0.2, Math.min(over, 1)) : 0;
+      if (step) {
+        if (panel) panel.scrollTop += step;
+        else window.scrollBy(0, step);
+      }
+      if (performance.now() < end) raf = requestAnimationFrame(follow);
+    };
+    raf = requestAnimationFrame(follow);
+    return () => cancelAnimationFrame(raf);
+  }, [stage]);
 
   const summary: Record<Stage, string> = {
     welcome: custom.welcome.trim() || "None. Creators go straight to the button.",
@@ -472,24 +513,24 @@ function Flow({
         </a>
       </div>
 
-      <ol className="relative">
+      <ol ref={list} className="relative">
         {/* the thread that ties the stages into one flow */}
         <span aria-hidden="true" className="absolute bottom-8 left-[15.5px] top-8 w-px bg-[#e1e1e8]" />
         {STAGES.map((s, i) => {
           const on = stage === s.id;
           return (
-            <li key={s.id} className="relative grid grid-cols-[32px_minmax(0,1fr)] gap-3 pb-3 last:pb-0">
+            <li key={s.id} data-stage={s.id} className="relative grid grid-cols-[32px_minmax(0,1fr)] gap-3 pb-3 last:pb-0">
               <span
                 aria-hidden="true"
-                className={`relative mt-[15px] grid size-8 place-items-center rounded-full text-[13px] font-semibold tabular-nums ring-4 ring-bg transition-colors duration-200 ${
-                  on ? "bg-[#5035e3] text-white" : "bg-white text-ink-2 shadow-[inset_0_0_0_0.5px_#d9d9df]"
+                className={`relative mt-[15px] grid size-8 place-items-center rounded-full text-[13px] font-semibold tabular-nums ring-4 ring-bg sm:ring-white transition-colors duration-200 ${
+                  on ? "bg-ink text-white" : "bg-white text-ink-2 shadow-[inset_0_0_0_0.5px_#d9d9df]"
                 }`}
               >
                 {i + 1}
               </span>
               <div
                 className={`overflow-hidden rounded-[20px] border bg-white transition-[border-color,box-shadow] duration-200 ${
-                  on ? "border-[#8f7cf7] shadow-[0_0_0_4px_rgba(143,124,247,0.12),0_18px_40px_-28px_rgba(80,53,227,0.5)]" : "border-[#ececf1] hover:border-[#dcdce4]"
+                  on ? "border-ink shadow-[inset_0_0_0_0.5px_var(--ink),0_18px_40px_-28px_rgba(22,26,53,0.45)]" : "border-[#ececf1] hover:border-[#dcdce4]"
                 }`}
               >
                 <button type="button" aria-expanded={on} onClick={() => onStage(s.id)} className="flex w-full items-center gap-3 px-5 py-4 text-left">
@@ -531,9 +572,9 @@ function Row({ on, onClick, className = "", children }: { on: boolean; onClick: 
       type="button"
       onClick={onClick}
       aria-current={on || undefined}
-      className={`flex w-full items-center gap-3 px-4 py-3 text-left text-[14.5px] transition-colors ${on ? "bg-lilac font-medium text-ink" : "text-ink-2 hover:bg-[#f4f4f6] hover:text-ink"} ${className}`}
+      className={`flex w-full items-center gap-3 px-4 py-3 text-left text-[14.5px] transition-colors ${on ? "bg-[#f0f0f3] font-medium text-ink" : "text-ink-2 hover:bg-[#f4f4f6] hover:text-ink"} ${className}`}
     >
-      <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full transition-colors ${on ? "bg-[#5035e3]" : "bg-[#d4d4de]"}`} />
+      <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full transition-colors ${on ? "bg-ink" : "bg-[#d4d4de]"}`} />
       {children}
     </button>
   );
@@ -546,7 +587,7 @@ function Row({ on, onClick, className = "", children }: { on: boolean; onClick: 
   business wants. Enter on a heading drops to its text; Backspace on an empty heading with nothing under
   it removes it. Removing one that has writing in it offers an undo.
 */
-function Brief({ brief, onChange }: { brief: Custom["brief"]; onChange: (b: Custom["brief"]) => void }) {
+function Brief({ labelledBy, brief, onChange }: { labelledBy: string; brief: Custom["brief"]; onChange: (b: Custom["brief"]) => void }) {
   const id = useId();
   const say = useToast();
   const box = useRef<HTMLDivElement>(null);
@@ -571,72 +612,166 @@ function Brief({ brief, onChange }: { brief: Custom["brief"]; onChange: (b: Cust
   };
 
   return (
-    <section className="rounded-[24px] border border-[#ececf1] bg-white px-5 py-6 sm:px-6">
-      <h2 id={`${id}-title`} className="text-[16px] font-semibold text-[#1c1c1c]">
-        What your Concierge knows about you and your preferences
-      </h2>
-      <p className="mt-2 text-[14px] leading-snug text-muted">
-        Put any context or information here, and write it however you like. The headings are just there to help you, but your Concierge takes in all of it.
-      </p>
-      <div
-        ref={box}
-        role="group"
-        aria-labelledby={`${id}-title`}
-        className="mt-4 rounded-[16px] border-[0.5px] border-[#e3e3e3] bg-[#fafafa] px-4 pb-4 pt-5 transition-[background-color,box-shadow,border-color] duration-200 focus-within:border-transparent focus-within:bg-white focus-within:shadow-[inset_0_0_0_2px_#8f7cf7,0_0_0_4px_rgba(143,124,247,0.14)] sm:px-5"
-      >
-        {brief.map((s, i) => (
-          <div key={s.id} className="group/section mb-5">
-            <div className="flex items-center gap-2">
-              <RiSparkling2Fill size={15} aria-hidden="true" className="shrink-0 text-[#8f7cf7]" />
-              <input
-                data-heading={s.id}
-                aria-label="Heading"
-                value={s.heading}
-                placeholder="New heading"
-                onChange={(e) => set(i, { heading: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    document.getElementById(`${id}-${s.id}`)?.focus();
-                  } else if (e.key === "Backspace" && !s.heading && !s.text) {
-                    e.preventDefault();
-                    const prev = brief[i - 1];
-                    remove(i);
-                    if (prev) document.getElementById(`${id}-${prev.id}`)?.focus();
+    /* a near-white page of notes on the white side; it turns white with the purple ring while you write */
+    <div
+      ref={box}
+      role="group"
+      aria-labelledby={labelledBy}
+      className="rounded-[20px] border border-[#ececf1] bg-[#fcfcfc] px-5 pb-5 pt-6 shadow-[0_1px_2px_rgba(15,20,40,0.04)] transition-[background-color,box-shadow,border-color] duration-200 focus-within:border-transparent focus-within:bg-white focus-within:shadow-[inset_0_0_0_2px_#8f7cf7,0_0_0_4px_rgba(143,124,247,0.14)] sm:px-7 sm:pt-7"
+    >
+      {brief.map((s, i) => (
+        <div key={s.id} className="group/section mb-6">
+          <div className="flex items-center gap-2">
+            <RiSparkling2Fill size={15} aria-hidden="true" className="shrink-0 text-[#8f7cf7]" />
+            <input
+              data-heading={s.id}
+              aria-label="Heading"
+              value={s.heading}
+              placeholder="New heading"
+              onChange={(e) => set(i, { heading: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  document.getElementById(`${id}-${s.id}`)?.querySelector("textarea")?.focus();
+                } else if (e.key === "Backspace" && !s.heading && !s.text) {
+                  e.preventDefault();
+                  const prev = brief[i - 1];
+                  remove(i);
+                  if (prev) {
+                    const last = [...(document.getElementById(`${id}-${prev.id}`)?.querySelectorAll("textarea") ?? [])].pop();
+                    last?.focus();
+                    last?.setSelectionRange(last.value.length, last.value.length);
                   }
-                }}
-                className="min-w-0 flex-1 bg-transparent text-[15.5px] font-semibold text-ink outline-none placeholder:font-medium placeholder:text-muted"
-              />
-              <button
-                type="button"
-                aria-label={`Remove ${s.heading.trim() || "this heading"}`}
-                onClick={() => remove(i)}
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted opacity-0 transition-[opacity,background-color,color] duration-200 hover:bg-[#ececf1] hover:text-ink focus-visible:opacity-100 group-focus-within/section:opacity-100 group-hover/section:opacity-100"
-              >
-                <RiCloseLine size={16} aria-hidden="true" />
-              </button>
-            </div>
-            <textarea
-              id={`${id}-${s.id}`}
-              aria-label={s.heading.trim() || "Notes"}
-              value={s.text}
-              onChange={(e) => set(i, { text: e.target.value })}
-              rows={1}
-              placeholder="Write anything here"
-              className="mt-1.5 block w-full resize-none bg-transparent pl-[23px] text-[15px] leading-[24px] text-ink-2 outline-none [field-sizing:content] placeholder:text-muted"
+                }
+              }}
+              className="min-w-0 flex-1 bg-transparent text-[16px] font-semibold text-ink outline-none placeholder:font-medium placeholder:text-muted"
             />
+            <button
+              type="button"
+              aria-label={`Remove ${s.heading.trim() || "this heading"}`}
+              onClick={() => remove(i)}
+              className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted opacity-0 transition-[opacity,background-color,color] duration-200 hover:bg-[#ececf1] hover:text-ink focus-visible:opacity-100 group-focus-within/section:opacity-100 group-hover/section:opacity-100"
+            >
+              <RiCloseLine size={16} aria-hidden="true" />
+            </button>
           </div>
-        ))}
-        <button
-          type="button"
-          onClick={add}
-          className="-ml-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[14px] font-semibold text-[#3b25c4] transition-colors duration-200 hover:bg-lilac hover:text-[#2c1aa3]"
-        >
-          <RiAddLine size={17} aria-hidden="true" />
-          Add a heading
-        </button>
-      </div>
-    </section>
+          <Notes id={`${id}-${s.id}`} label={s.heading.trim() || "Notes"} value={s.text} onChange={(text) => set(i, { text })} />
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={add}
+        className="-ml-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[14px] font-semibold text-[#3b25c4] transition-colors duration-200 hover:bg-lilac hover:text-[#2c1aa3]"
+      >
+        <RiAddLine size={17} aria-hidden="true" />
+        Add a heading
+      </button>
+    </div>
+  );
+}
+
+/*
+  The writing under a heading, one line per row so bullets can hang: a line saved with "• " in front is a
+  bullet, and typing "- " at the start of a line turns it into one. Enter starts a new line (a bullet if
+  you were in one; on an empty bullet it goes back to plain text), Backspace at the start drops the bullet,
+  then joins the line onto the one above.
+*/
+type NoteLine = { bullet: boolean; text: string };
+const BULLET = "• ";
+const toLines = (v: string): NoteLine[] => v.split("\n").map((l) => (l.startsWith(BULLET) || l.startsWith("- ") ? { bullet: true, text: l.slice(2) } : { bullet: false, text: l }));
+const fromLines = (ls: NoteLine[]) => ls.map((l) => (l.bullet ? BULLET : "") + l.text).join("\n");
+
+function Notes({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (v: string) => void }) {
+  const lines = toLines(value);
+  const rows = useRef<(HTMLTextAreaElement | null)[]>([]);
+  /* where the caret goes once the next render lands */
+  const caret = useRef<{ i: number; at: number } | null>(null);
+
+  useEffect(() => {
+    if (!caret.current) return;
+    const el = rows.current[caret.current.i];
+    el?.focus();
+    el?.setSelectionRange(caret.current.at, caret.current.at);
+    caret.current = null;
+  });
+
+  const commit = (next: NoteLine[], focus?: { i: number; at: number }) => {
+    if (focus) caret.current = focus;
+    onChange(fromLines(next));
+  };
+  const empty = lines.length === 1 && !lines[0].bullet && !lines[0].text;
+
+  return (
+    <div id={id} role="group" aria-label={label} className="mt-1.5 flex flex-col gap-1.5">
+      {lines.map((l, i) => (
+        <div key={i} className="relative pl-[23px]">
+          {l.bullet && <span aria-hidden="true" className="absolute left-[6px] top-[11px] size-[5px] rounded-full bg-[#c4c4cd]" />}
+          <textarea
+            ref={(el) => {
+              rows.current[i] = el;
+            }}
+            aria-label={l.bullet ? `${label}, bullet` : label}
+            value={l.text}
+            rows={1}
+            placeholder={empty ? "Write anything here" : undefined}
+            onChange={(e) => {
+              const v = e.target.value;
+              const next = [...lines];
+              // pasted lines become lines of their own
+              if (v.includes("\n")) {
+                const [first, ...rest] = toLines(v);
+                next.splice(i, 1, { bullet: l.bullet || first.bullet, text: first.text }, ...rest);
+                commit(next, { i: i + rest.length, at: next[i + rest.length].text.length });
+                return;
+              }
+              if (!l.bullet && v.startsWith("- ")) {
+                next[i] = { bullet: true, text: v.slice(2) };
+                commit(next, { i, at: e.target.selectionStart - 2 });
+                return;
+              }
+              next[i] = { ...l, text: v };
+              onChange(fromLines(next));
+            }}
+            onKeyDown={(e) => {
+              const el = e.currentTarget;
+              const start = el.selectionStart;
+              const flat = start === el.selectionEnd;
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                const next = [...lines];
+                if (l.bullet && !l.text) {
+                  next[i] = { bullet: false, text: "" };
+                  commit(next, { i, at: 0 });
+                  return;
+                }
+                next.splice(i, 1, { ...l, text: l.text.slice(0, start) }, { bullet: l.bullet, text: l.text.slice(el.selectionEnd) });
+                commit(next, { i: i + 1, at: 0 });
+              } else if (e.key === "Backspace" && flat && start === 0) {
+                if (l.bullet) {
+                  e.preventDefault();
+                  commit(lines.map((x, j) => (j === i ? { ...x, bullet: false } : x)), { i, at: 0 });
+                } else if (i > 0) {
+                  e.preventDefault();
+                  const prev = lines[i - 1];
+                  const next = [...lines];
+                  next.splice(i - 1, 2, { ...prev, text: prev.text + l.text });
+                  commit(next, { i: i - 1, at: prev.text.length });
+                }
+              } else if (e.key === "ArrowUp" && flat && start === 0 && i > 0) {
+                e.preventDefault();
+                rows.current[i - 1]?.focus();
+              } else if (e.key === "ArrowDown" && flat && start === l.text.length && i < lines.length - 1) {
+                e.preventDefault();
+                const below = rows.current[i + 1];
+                below?.focus();
+                below?.setSelectionRange(0, 0);
+              }
+            }}
+            className="block w-full resize-none bg-transparent text-[15.5px] leading-[26px] text-ink outline-none [field-sizing:content] placeholder:text-muted"
+          />
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -699,7 +834,7 @@ function ConciergeChat() {
   }, [reduce]);
 
   return (
-    <section aria-labelledby="concierge-chat" className="flex h-[540px] flex-col overflow-hidden rounded-[24px] lg:h-[min(540px,calc(100svh-var(--chat-top,88px)-24px))] lg:min-h-[400px] border border-[#ececf1] bg-white shadow-[0_30px_60px_-40px_rgba(40,30,110,0.35)]">
+    <section aria-labelledby="concierge-chat" className="flex h-[540px] flex-col overflow-hidden rounded-[24px] lg:h-[min(560px,calc(100svh-240px))] lg:min-h-[400px] border border-[#ececf1] bg-white shadow-[0_30px_60px_-40px_rgba(40,30,110,0.35)]">
       <header className="flex items-center gap-3 border-b border-[#ececf1] px-5 py-4">
         <span className="relative shrink-0">
           {/* a soft ring breathes while the Concierge is writing */}

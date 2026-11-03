@@ -29,34 +29,37 @@ export const BRIEF: BriefSection[] = [
   {
     id: "about",
     heading: "About us",
-    text: "Kona Coffee is a neighborhood café in Los Angeles. We roast our own beans in small batches and pour them as espresso, pour-overs and cold brew.\nWe sell our beans by the bag in the café and online too.",
+    text: "• Phyla is an acne skincare brand. Our phage technology targets the bacteria behind acne and leaves the rest of your skin's microbiome alone.\n• Our flagship is the Acne Phage Serum. We also make a gel cleanser and an anti-blemish moisturizer, sold together as a 3-step system.\n• We just launched at Target in Beauty Studio, and dermatologists and med spas carry us too.",
   },
   {
     id: "collabs",
     heading: "The collabs we want",
-    text: "Gifted visits: a creator comes in, has coffee and pastries on us, and posts about it. A bag of beans to take home is the most we add.\nWe don't pay creator fees right now, apart from small UGC deals.",
+    text: "• We do gifted collabs much more often than paid. We really want to get our product out there.\n• We only gift in the US. Bigger creators with high engagement are better, but we'd gift to someone with 5,000 followers and decent engagement.",
   },
   {
     id: "who",
     heading: "Who to prioritize",
-    text: "Creators with a real Los Angeles audience. Locals come in; followers in other cities don't.\nFood, coffee and lifestyle creators first. We'd host someone with 5,000 followers if the engagement is real.",
+    text: "• Beauty professionals, like estheticians, do a great job representing our product, so give them a bump.\n• In some cases we'll pay, especially for professionals or bigger creators.",
   },
   {
     id: "ugc",
     heading: "UGC",
-    text: "Open to it. If someone makes great photos or videos of our drinks and gives us full usage rights, a gifted visit or a small fee (under $100) works.",
+    text: "• We're open to UGC-only creators. Even if someone's really small, if they'll give us full usage rights and make high-quality photos or videos with our products, they can be a strong fit when it's gifted or cheap (under $100).",
   },
   {
     id: "dealbreakers",
     heading: "Dealbreakers",
-    text: "Bought followers, anything that wouldn't reflect well on us, or low-quality content.",
+    text: "• Nothing specific, just the usual: red flags, anything that wouldn't reflect well on our brand, or low-quality content.",
   },
+  { id: "else", heading: "Anything else?", text: "• Nope!" },
 ];
 
 export const newSection = (): BriefSection => ({ id: Math.random().toString(36).slice(2, 10), heading: "", text: "" });
 
 /* gifted: a note on the payment question saying the business usually goes for gifted (unpaid) collabs */
-export type Custom = { welcome: string; thanks: string; questions: Question[]; gifted: boolean; brief: BriefSection[] };
+/* briefV: which default the brief was started from; a brief saved from an older default gives way to the current one */
+export type Custom = { welcome: string; thanks: string; questions: Question[]; gifted: boolean; brief: BriefSection[]; briefV: number };
+const BRIEF_V = 2;
 
 export const DEFAULT_CUSTOM: Custom = {
   welcome: "So glad you reached out! Tell us about yourself and what you have in mind. We'll get back to you soon! 💜",
@@ -64,6 +67,7 @@ export const DEFAULT_CUSTOM: Custom = {
   questions: [],
   gifted: false,
   brief: BRIEF,
+  briefV: BRIEF_V,
 };
 
 /* the creator flow's own steps, in order, as the business reads them */
@@ -114,11 +118,8 @@ function read(handle: string): Custom {
   try {
     if (raw) {
       const saved = JSON.parse(raw);
-      /* briefs saved before it became one note kept a text per fixed heading; carry those texts over */
-      const brief: BriefSection[] = Array.isArray(saved.brief)
-        ? saved.brief
-        : BRIEF.map((b) => ({ ...b, text: typeof saved.brief?.[b.id] === "string" ? saved.brief[b.id] : b.text }));
-      value = { ...DEFAULT_CUSTOM, ...saved, brief };
+      const brief: BriefSection[] = saved.briefV === BRIEF_V && Array.isArray(saved.brief) ? saved.brief : BRIEF;
+      value = { ...DEFAULT_CUSTOM, ...saved, brief, briefV: BRIEF_V };
     }
   } catch {}
   cache.set(handle, { raw, value });
