@@ -97,7 +97,8 @@ export default function Requests() {
       {/* one filter: which requests you're looking at */}
       <Rise i={1} className="mt-6">
         {/* the header switch's treatment: cooler grey track with a soft inset, so the white thumb stands out */}
-        <div role="tablist" aria-label="Collab requests" className="flex rounded-[14px] bg-[#eef0f3] p-1 shadow-[inset_0_1px_2px_rgba(15,20,40,0.06)]">
+        <div role="tablist" aria-label="Collab requests" className="relative flex rounded-[14px] bg-[#eef0f3] p-1 shadow-[inset_0_1px_2px_rgba(15,20,40,0.06)]">
+          <Thumb selected={tab} rounded="rounded-[10px]" />
           {TABS.map((t) => {
             const on = t.id === tab;
             const n = count(t.status);
@@ -112,7 +113,6 @@ export default function Requests() {
                 onClick={() => setTab(t.id)}
                 className={`relative flex h-10 flex-auto items-center justify-center gap-1 whitespace-nowrap rounded-[10px] px-1.5 text-[13px] font-medium sm:basis-0 sm:gap-1.5 sm:px-2 sm:text-[14px] transition-colors duration-200 ${on ? "text-ink" : "text-muted hover:text-ink"}`}
               >
-                {on && <Thumb layoutId="dash-tab" rounded="rounded-[10px]" />}
                 <span className="relative">{t.label}</span>
                 {/* only New carries a count: red while it holds something unopened, grey once it's all been read */}
                 {t.id === "new" && (

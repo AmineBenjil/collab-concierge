@@ -1,8 +1,8 @@
 "use client";
 
 import { RiCheckLine, RiFileCopyLine } from "@remixicon/react";
-import { motion } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { animate, motion, useMotionValue } from "motion/react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Avatar } from "../HandleForm";
 
 /* Shared pieces for the business side: setup, share and requests. */
@@ -115,7 +115,6 @@ export function Segmented<T extends string>({
   options,
   value,
   onChange,
-  id,
   label,
   size = "md",
   full = false,
@@ -123,14 +122,14 @@ export function Segmented<T extends string>({
   options: { value: T; label: ReactNode }[];
   value: T;
   onChange: (v: T) => void;
-  id: string;
   label: string;
   size?: "sm" | "md";
   /* stretch to the container, options sharing the width equally */
   full?: boolean;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className={`flex items-center rounded-full bg-[#eef0f3] p-1 shadow-[inset_0_1px_2px_rgba(15,20,40,0.06)] ${full ? "w-full" : ""}`}>
+    <div role="radiogroup" aria-label={label} className={`relative flex items-center rounded-full bg-[#eef0f3] p-1 shadow-[inset_0_1px_2px_rgba(15,20,40,0.06)] ${full ? "w-full" : ""}`}>
+      <Thumb selected={value} />
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -142,7 +141,6 @@ export function Segmented<T extends string>({
             onClick={() => onChange(o.value)}
             className={`relative rounded-full font-semibold transition-colors duration-200 ${full ? "flex-1" : ""} ${size === "sm" ? "px-3 py-1 text-[13px]" : "px-4 py-1.5 text-[14px]"} ${on ? "text-ink" : "text-muted hover:text-ink"}`}
           >
-            {on && <Thumb layoutId={id} />}
             <span className="relative">{o.label}</span>
           </button>
         );
@@ -162,12 +160,54 @@ export function SectionLabel({ children, right, className = "" }: { children: Re
   );
 }
 
-export function Thumb({ layoutId, rounded = "rounded-full" }: { layoutId: string; rounded?: string }) {
+/*
+  The white thumb in a switch: one element, first in the track, that slides to whichever option is
+  checked or selected, placed from that option's offset inside the track. A shared layoutId measured it
+  against the page instead, so arriving from another page (scrolled, or mid-entrance) sent it flying in
+  from across the screen. `selected` is only there to re-place it when the choice changes.
+*/
+export function Thumb({ selected, rounded = "rounded-full" }: { selected: string; rounded?: string }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const width = useMotionValue(0);
+  const height = useMotionValue(0);
+  /* the first placement lands in one go; only later changes slide */
+  const placed = useRef(false);
+
+  useLayoutEffect(() => {
+    const track = ref.current?.parentElement;
+    if (!track) return;
+    const place = () => {
+      const on = track.querySelector<HTMLElement>('[aria-checked="true"], [aria-selected="true"]');
+      if (!on) return;
+      const to = { x: on.offsetLeft, y: on.offsetTop, width: on.offsetWidth, height: on.offsetHeight };
+      if (!placed.current) {
+        x.set(to.x);
+        y.set(to.y);
+        width.set(to.width);
+        height.set(to.height);
+        placed.current = true;
+        return;
+      }
+      const spring = { type: "spring", stiffness: 420, damping: 36 } as const;
+      animate(x, to.x, spring);
+      animate(y, to.y, spring);
+      animate(width, to.width, spring);
+      animate(height, to.height, spring);
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(track);
+    return () => ro.disconnect();
+  }, [selected, x, y, width, height]);
+
   return (
     <motion.span
-      layoutId={layoutId}
-      className={`absolute inset-0 ${rounded} bg-white shadow-[0_1px_2px_rgba(15,20,40,0.08),0_4px_12px_-4px_rgba(15,20,40,0.18)]`}
-      transition={{ type: "spring", stiffness: 420, damping: 36 }}
+      ref={ref}
+      aria-hidden="true"
+      style={{ x, y, width, height }}
+      className={`absolute left-0 top-0 ${rounded} bg-white shadow-[0_1px_2px_rgba(15,20,40,0.08),0_4px_12px_-4px_rgba(15,20,40,0.18)]`}
     />
   );
 }

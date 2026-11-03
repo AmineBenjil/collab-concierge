@@ -4,7 +4,7 @@ import { RiArrowDownSLine, RiArrowLeftLine, RiInbox2Fill, RiInbox2Line, RiLogout
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Avatar } from "../HandleForm";
 import Logo, { BrandIcon } from "../Logo";
 import { displayName } from "../names";
@@ -141,10 +141,40 @@ const PAGES = [
   { href: "/customize", label: "Customize", icon: RiPaletteLine, on: RiPaletteFill },
 ];
 
+/*
+  The dark line is one element that moves to the tab you're on, placed from the tab's offset inside the
+  bar. A shared layoutId measured it against the page instead, so when the next page started back at the
+  top the line flew in from wherever you'd scrolled to.
+*/
 function Pages({ pathname, handle }: { pathname: string; handle: string }) {
   const q = `?handle=${encodeURIComponent(handle)}`;
+  const bar = useRef<HTMLDivElement>(null);
+  const [line, setLine] = useState<{ x: number; width: number } | null>(null);
+
+  useLayoutEffect(() => {
+    const el = bar.current;
+    if (!el) return;
+    const place = () => {
+      const tab = el.querySelector<HTMLElement>('[aria-current="page"]');
+      setLine(tab ? { x: tab.offsetLeft + 10, width: tab.offsetWidth - 20 } : null);
+    };
+    place();
+    const ro = new ResizeObserver(place);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [pathname]);
+
   return (
-    <div className="flex h-full items-stretch sm:gap-3">
+    <div ref={bar} className="relative flex h-full items-stretch sm:gap-3">
+      {line && (
+        <motion.span
+          aria-hidden="true"
+          className="absolute -bottom-px left-0 z-10 h-[3px] rounded-full bg-ink"
+          initial={false}
+          animate={line}
+          transition={{ duration: 0.4, ease: EASE }}
+        />
+      )}
       {PAGES.map((p) => {
         const on = pathname === p.href;
         const Icon = on ? p.on : p.icon;
@@ -163,7 +193,6 @@ function Pages({ pathname, handle }: { pathname: string; handle: string }) {
             <span className={`text-[11.5px] font-semibold transition-colors duration-200 sm:text-[14.5px] ${on ? "text-ink" : "text-muted group-hover:text-ink"}`}>{p.label}</span>
             {/* a grey line previews the hover; the dark one marks where you are */}
             <span aria-hidden="true" className="absolute inset-x-2.5 -bottom-px h-[3px] rounded-full bg-[#dcdce3] opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
-            {on && <motion.span layoutId="concierge-page-line" aria-hidden="true" transition={{ duration: 0.4, ease: EASE }} className="absolute inset-x-2.5 -bottom-px h-[3px] rounded-full bg-ink" />}
           </Link>
         );
       })}

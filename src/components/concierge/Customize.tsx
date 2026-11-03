@@ -17,13 +17,14 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   ALWAYS_ASKED,
-  BRIEF,
+  newSection,
   DEFAULT_CUSTOM,
   READY,
   describe,
   newQuestion,
   saveCustom,
   useCustom,
+  type BriefSection,
   type Custom,
   type PreviewMessage,
   type Question,
@@ -208,7 +209,8 @@ export default function Customize() {
 
               {/* the Requests page's switch: cooler grey track with a soft inset, so the white thumb stands out */}
               <In intro={intro} i={1} className="mt-6">
-                <div role="tablist" aria-label="Customize" className="flex rounded-[14px] bg-[#eef0f3] p-1 shadow-[inset_0_1px_2px_rgba(15,20,40,0.06)]">
+                <div role="tablist" aria-label="Customize" className="relative flex rounded-[14px] bg-[#eef0f3] p-1 shadow-[inset_0_1px_2px_rgba(15,20,40,0.06)]">
+                  <Thumb selected={side} rounded="rounded-[10px]" />
                   {SIDES.map((s) => {
                     const on = s.id === side;
                     return (
@@ -222,7 +224,6 @@ export default function Customize() {
                         onClick={() => setSide(s.id)}
                         className={`relative flex h-10 flex-1 basis-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[10px] px-2 text-[13px] font-medium sm:text-[14px] transition-colors duration-200 ${on ? "text-ink" : "text-muted hover:text-ink"}`}
                       >
-                        {on && <Thumb layoutId="customize-side" rounded="rounded-[10px]" />}
                         {s.id === "concierge" && <RiSparkling2Fill size={14} aria-hidden="true" className={`relative transition-colors duration-200 ${on ? "text-[#7a5cfa]" : ""}`} />}
                         <span className="relative sm:hidden">{s.short}</span>
                         <span className="relative hidden sm:inline">{s.label}</span>
@@ -540,30 +541,102 @@ function Row({ on, onClick, className = "", children }: { on: boolean; onClick: 
 
 /* ---------- what the Concierge knows: the brief, edited in place ---------- */
 
+/*
+  One long field, like a note: a heading with a sparkle, free text under it, and as many of those as the
+  business wants. Enter on a heading drops to its text; Backspace on an empty heading with nothing under
+  it removes it. Removing one that has writing in it offers an undo.
+*/
 function Brief({ brief, onChange }: { brief: Custom["brief"]; onChange: (b: Custom["brief"]) => void }) {
   const id = useId();
+  const say = useToast();
+  const box = useRef<HTMLDivElement>(null);
+  const focusNext = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!focusNext.current) return;
+    box.current?.querySelector<HTMLElement>(`[data-heading="${focusNext.current}"]`)?.focus();
+    focusNext.current = null;
+  }, [brief]);
+
+  const set = (i: number, patch: Partial<BriefSection>) => onChange(brief.map((s, j) => (j === i ? { ...s, ...patch } : s)));
+  const add = () => {
+    const s = newSection();
+    focusNext.current = s.id;
+    onChange([...brief, s]);
+  };
+  const remove = (i: number) => {
+    const s = brief[i];
+    onChange(brief.filter((_, j) => j !== i));
+    if (s.heading.trim() || s.text.trim()) say(`Removed ${s.heading.trim() ? `“${s.heading.trim()}”` : "a heading"}`, { label: "Undo", run: () => onChange(brief) });
+  };
+
   return (
-    <>
-      <p className="mb-3 px-1 text-[13.5px] leading-snug text-ink-2">Creators never see this. Your Concierge reads all of it on every new request.</p>
-      <div className={CARD}>
-        {BRIEF.map((s) => (
-          <section key={s.id} className={PANEL}>
-            <label htmlFor={`${id}-${s.id}`} className={`flex items-center gap-2 ${HEADING}`}>
-              <RiSparkling2Fill size={14} aria-hidden="true" className="text-[#8f7cf7]" />
-              {s.heading}
-            </label>
+    <section className="rounded-[24px] border border-[#ececf1] bg-white px-5 py-6 sm:px-6">
+      <h2 id={`${id}-title`} className="text-[16px] font-semibold text-[#1c1c1c]">
+        What your Concierge knows about you and your preferences
+      </h2>
+      <p className="mt-2 text-[14px] leading-snug text-muted">
+        Put any context or information here, and write it however you like. The headings are just there to help you, but your Concierge takes in all of it.
+      </p>
+      <div
+        ref={box}
+        role="group"
+        aria-labelledby={`${id}-title`}
+        className="mt-4 rounded-[16px] border-[0.5px] border-[#e3e3e3] bg-[#fafafa] px-4 pb-4 pt-5 transition-[background-color,box-shadow,border-color] duration-200 focus-within:border-transparent focus-within:bg-white focus-within:shadow-[inset_0_0_0_2px_#8f7cf7,0_0_0_4px_rgba(143,124,247,0.14)] sm:px-5"
+      >
+        {brief.map((s, i) => (
+          <div key={s.id} className="group/section mb-5">
+            <div className="flex items-center gap-2">
+              <RiSparkling2Fill size={15} aria-hidden="true" className="shrink-0 text-[#8f7cf7]" />
+              <input
+                data-heading={s.id}
+                aria-label="Heading"
+                value={s.heading}
+                placeholder="New heading"
+                onChange={(e) => set(i, { heading: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    document.getElementById(`${id}-${s.id}`)?.focus();
+                  } else if (e.key === "Backspace" && !s.heading && !s.text) {
+                    e.preventDefault();
+                    const prev = brief[i - 1];
+                    remove(i);
+                    if (prev) document.getElementById(`${id}-${prev.id}`)?.focus();
+                  }
+                }}
+                className="min-w-0 flex-1 bg-transparent text-[15.5px] font-semibold text-ink outline-none placeholder:font-medium placeholder:text-muted"
+              />
+              <button
+                type="button"
+                aria-label={`Remove ${s.heading.trim() || "this heading"}`}
+                onClick={() => remove(i)}
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted opacity-0 transition-[opacity,background-color,color] duration-200 hover:bg-[#ececf1] hover:text-ink focus-visible:opacity-100 group-focus-within/section:opacity-100 group-hover/section:opacity-100"
+              >
+                <RiCloseLine size={16} aria-hidden="true" />
+              </button>
+            </div>
             <textarea
               id={`${id}-${s.id}`}
-              value={brief[s.id]}
-              onChange={(e) => onChange({ ...brief, [s.id]: e.target.value })}
-              rows={2}
-              placeholder="Anything your Concierge should know"
-              className={`${FIELD} mt-3 block min-h-[72px] resize-none py-3 leading-[22px] [field-sizing:content]`}
+              aria-label={s.heading.trim() || "Notes"}
+              value={s.text}
+              onChange={(e) => set(i, { text: e.target.value })}
+              rows={1}
+              placeholder="Write anything here"
+              className="mt-1.5 block w-full resize-none bg-transparent pl-[23px] text-[15px] leading-[24px] text-ink-2 outline-none [field-sizing:content] placeholder:text-muted"
             />
-          </section>
+          </div>
         ))}
+        <button
+          type="button"
+          onClick={add}
+          className="-ml-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[14px] font-semibold text-[#3b25c4] transition-colors duration-200 hover:bg-lilac hover:text-[#2c1aa3]"
+        >
+          <RiAddLine size={17} aria-hidden="true" />
+          Add a heading
+        </button>
       </div>
-    </>
+    </section>
   );
 }
 
@@ -848,7 +921,6 @@ function QuestionEditor({
             <h2 className={HEADING}>How creators answer</h2>
             <div className="mt-3">
               <Segmented<Question["kind"]>
-                id="question-kind"
                 label="How creators answer"
                 full
                 value={q.kind}
