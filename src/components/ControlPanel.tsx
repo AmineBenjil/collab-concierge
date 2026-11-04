@@ -5,7 +5,8 @@ import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { useControls, type AddressAsk, type HeroBg, type SettingsLook, type StageBg } from "./controls";
+import { demo, QA_STATES } from "./concierge/change-email/model";
+import { useControls, type AddressAsk, type HeroBg, type StageBg } from "./controls";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -22,12 +23,6 @@ const ADDRESS_OPTIONS: { value: AddressAsk; label: string; hint: string }[] = [
 const STAGE_OPTIONS: { value: StageBg; label: string; hint: string }[] = [
   { value: "gradient", label: "Gradient", hint: "Lilac wash" },
   { value: "white", label: "White", hint: "Plain" },
-];
-
-const SETTINGS_OPTIONS: { value: SettingsLook; label: string; hint: string }[] = [
-  { value: "a", label: "A", hint: "Inline list" },
-  { value: "b", label: "B", hint: "Switch" },
-  { value: "c", label: "C", hint: "Preview" },
 ];
 
 /* jump straight to any screen of the demo without walking the flows */
@@ -61,11 +56,11 @@ function useEmbedded() {
   return useSyncExternalStore(noop, () => new URLSearchParams(window.location.search).get("embed") === "1", () => false);
 }
 
-/* Floating gear in the corner: shortcuts to every screen, and the A/B switches. On every page. */
+/* Floating gear in the bottom-left corner, leaving the right one to the Concierge's chat button: shortcuts to every screen, and the A/B switches. On every page. */
 export default function ControlPanel() {
   const [open, setOpen] = useState(false);
-  const [section, setSection] = useState<"shortcuts" | "look" | null>("shortcuts");
-  const { heroBg, setHeroBg, address, setAddress, stageBg, setStageBg, settingsLook, setSettingsLook } = useControls();
+  const [section, setSection] = useState<"shortcuts" | "look" | "email" | null>("shortcuts");
+  const { heroBg, setHeroBg, address, setAddress, stageBg, setStageBg } = useControls();
   const pathname = usePathname();
   const embedded = useEmbedded();
   const ref = useRef<HTMLDivElement>(null);
@@ -84,11 +79,11 @@ export default function ControlPanel() {
 
   if (embedded) return null;
 
-  const toggle = (s: "shortcuts" | "look") => setSection(section === s ? null : s);
+  const toggle = (s: "shortcuts" | "look" | "email") => setSection(section === s ? null : s);
 
   return (
     // under the request pop-up (z-60), so the gear never sits on its footer buttons
-    <div ref={ref} className="fixed bottom-5 right-5 z-[55] flex flex-col items-end gap-3">
+    <div ref={ref} className="fixed bottom-5 left-5 z-[55] flex flex-col items-start gap-3">
       <AnimatePresence>
         {open && (
           <motion.div
@@ -100,7 +95,7 @@ export default function ControlPanel() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.98 }}
             transition={{ duration: 0.25, ease: EASE }}
-            style={{ transformOrigin: "bottom right" }}
+            style={{ transformOrigin: "bottom left" }}
           >
             <div className="flex shrink-0 items-center justify-between px-4 pb-2 pt-4">
               <span className="text-[15px] font-semibold">Control panel</span>
@@ -146,7 +141,10 @@ export default function ControlPanel() {
                 <Toggle legend="Hero background" options={HERO_OPTIONS} value={heroBg} onChange={setHeroBg} />
                 <Toggle legend="Creator flow, step 4" options={ADDRESS_OPTIONS} value={address} onChange={setAddress} />
                 <Toggle legend="Customize, preview background" options={STAGE_OPTIONS} value={stageBg} onChange={setStageBg} />
-                <Toggle legend="Settings page" options={SETTINGS_OPTIONS} value={settingsLook} onChange={setSettingsLook} />
+              </Section>
+
+              <Section title="Change email" hint="Open any state of the flow" open={section === "email"} onToggle={() => toggle("email")}>
+                <EmailQa />
               </Section>
             </div>
           </motion.div>
@@ -211,6 +209,43 @@ function Section({ title, hint, open, onToggle, children }: { title: string; hin
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+/* the change-email flow: jump to any state, or drive the pending link */
+function EmailQa() {
+  const go = (state: string) => {
+    const url = new URL("/settings", window.location.origin);
+    url.searchParams.set("handle", new URLSearchParams(window.location.search).get("handle") ?? DEMO);
+    url.searchParams.set("state", state);
+    window.location.assign(url.toString());
+  };
+  const chip = "rounded-full bg-[#f3f2f9] px-2.5 py-1 text-[12.5px] font-medium text-ink transition-colors hover:bg-lilac hover:text-violet";
+  return (
+    <div className="px-2 pb-1 pt-2">
+      <div className="text-[13px] font-medium text-ink-2">Open a state</div>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {QA_STATES.map((s) => (
+          <button key={s} type="button" onClick={() => go(s)} className={chip}>
+            {s}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-3 text-[13px] font-medium text-ink-2">The pending link</div>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <button type="button" onClick={() => demo.openLink() || alert("Nothing pending. Send a link first.")} className={chip}>
+          Open it in a new tab
+        </button>
+        <button type="button" onClick={() => demo.expireLink() || alert("Nothing pending. Send a link first.")} className={chip}>
+          Run its clock out
+        </button>
+        <button type="button" onClick={() => { demo.reset(); window.location.reload(); }} className={chip}>
+          Reset
+        </button>
+      </div>
+      <p className="mt-2 text-[11.5px] leading-snug text-muted">Test addresses: anything @taken.com is already used, @offline.com fails to send, a 4th send in 10 minutes is rate limited.</p>
     </div>
   );
 }

@@ -211,9 +211,27 @@ h3 { letter-spacing: -0.025em; line-height: 1.15; }
 .caret { animation: caret 1s steps(1) infinite; }
 @keyframes caret { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
 
+/* the Concierge's teaser: a stroke in the logo's colours, turning slowly round the bubble, with a soft glow of
+   the same colours behind it. --spin is registered so the conic gradient's angle can animate */
+@property --spin { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+.glow-ring {
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    conic-gradient(from var(--spin), #4daeff, #749bff, #cba0f6, #e9a8b1, #fbb647, #4daeff) border-box;
+  animation: spin-ring 4s linear infinite;
+}
+.glow-halo {
+  background: conic-gradient(from var(--spin), #4daeff, #749bff, #cba0f6, #e9a8b1, #fbb647, #4daeff);
+  filter: blur(14px);
+  opacity: 0.45;
+  animation: spin-ring 4s linear infinite;
+}
+@keyframes spin-ring { to { --spin: 360deg; } }
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .marquee-up, .marquee-down, .marquee-x, .typing-dot, .caret { animation: none; }
+  .marquee-up, .marquee-down, .marquee-x, .typing-dot, .caret, .glow-ring, .glow-halo { animation: none; }
 }
 
 /* text fields draw their own focus state (see HandleForm), so the global ring skips them */

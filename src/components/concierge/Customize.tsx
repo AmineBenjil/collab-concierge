@@ -6,25 +6,21 @@ import {
   RiArrowLeftSLine,
   RiArrowRightSLine,
   RiArrowRightUpLine,
-  RiArrowUpLine,
   RiCheckLine,
   RiCloseLine,
   RiLock2Line,
-  RiSparkling2Fill,
 } from "@remixicon/react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   ALWAYS_ASKED,
-  newSection,
   DEFAULT_CUSTOM,
   READY,
   describe,
   newQuestion,
   saveCustom,
   useCustom,
-  type BriefSection,
   type Custom,
   type PreviewMessage,
   type Question,
@@ -32,7 +28,7 @@ import {
 } from "../creator/custom";
 import { useControls, type AddressAsk } from "../controls";
 import { CreatorPhone } from "../creator/PreviewDevice";
-import { BrandIcon } from "../Logo";
+import { MyConcierge } from "./MyConcierge";
 import HowYouWork, { modeTitle } from "./HowYouWork";
 import { useToast } from "./Shell";
 import { useHandle } from "./store";
@@ -40,10 +36,10 @@ import { EASE, Rise, Segmented, SWITCH_TAB, SWITCH_TRACK, Thumb } from "./ui";
 
 /*
   Make it yours, split by who it's for. "What creators see" lists the link's four stages in the order
-  creators meet them; the open stage is what the phone shows, and the stepper under the phone walks the
-  same screens, opening each stage as it goes. "What your Concierge knows" is the brief: creators never
-  see it, so the phone steps aside for where the brief is headed, tuning it by chat. Everything saves as
-  you type; a question opens in its own editor.
+  creators meet them; the open stage is what the phone shows, and the stepper over the phone walks the
+  same screens, opening each stage as it goes. "My Concierge" is the brief: creators never see it, so it
+  gets a page of its own, with the Concierge's chat a button away in the corner. Everything saves as you
+  type; a question opens in its own editor.
 */
 
 type Side = "creators" | "concierge";
@@ -51,8 +47,8 @@ type Stage = "welcome" | "setup" | "asked" | "yours" | "thanks";
 type Editing = { q: Question; isNew: boolean } | null;
 
 const SIDES: { id: Side; label: string }[] = [
-  { id: "creators", label: "Creator view" },
   { id: "concierge", label: "My Concierge" },
+  { id: "creators", label: "Creator view" },
 ];
 /* what heads the left side of the sheet; the emoji are pictures so they look the same in every browser */
 const HEADS: Record<Side, { title: string; emoji: string; sub: string }> = {
@@ -100,11 +96,11 @@ const PANEL = "bg-white px-5 py-5 sm:px-6";
 const BOX = "overflow-hidden rounded-[16px] border-[0.5px] border-[#e3e3e3] bg-[#fafafa]";
 const HEADING = "text-[14px] font-semibold leading-4 text-[#1c1c1c]";
 const HINT = "text-[13px] leading-snug text-muted";
-/* the controls stop growing on wide screens */
-const COLUMN = "max-w-[700px]";
+/* phones and tablets cap the controls; on laptops they fill the panel, between equal gaps */
+const COLUMN = "max-w-[700px] lg:max-w-none";
 /* text fields: light grey at rest; white with the purple stroke and a soft glow while typing */
 const FIELD =
-  "w-full rounded-[16px] border-[0.5px] border-[#e3e3e3] bg-[#fafafa] px-4 text-[15px] text-ink outline-none transition-[background-color,box-shadow,border-color] duration-200 placeholder:text-muted focus:border-transparent focus:bg-white focus:shadow-[inset_0_0_0_2px_#8f7cf7,0_0_0_4px_rgba(143,124,247,0.14)]";
+  "w-full rounded-[16px] border-[0.5px] border-[#e3e3e3] bg-[#fafafa] px-4 text-[15px] text-ink outline-none transition-[background-color,box-shadow,border-color] duration-200 placeholder:text-muted focus:border-transparent focus:bg-white focus:shadow-[inset_0_0_0_2px_#8f7cf7]";
 
 export default function Customize() {
   const handle = useHandle();
@@ -113,7 +109,7 @@ export default function Customize() {
   const frame = useRef<HTMLIFrameElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
 
-  const [side, setSide] = useState<Side>("creators");
+  const [side, setSide] = useState<Side>("concierge");
   const [pos, setPos] = useState(0);
   /* the setup stage has no screen of its own; while it's open the phone shows the screens it changes */
   const [pinned, setPinned] = useState<Stage | null>(null);
@@ -200,13 +196,15 @@ export default function Customize() {
   };
 
   const intro = !swapped;
-  const view = side === "concierge" ? "concierge" : editing ? "edit" : "creators";
+  const view = editing ? "edit" : "creators";
+  /* My Concierge leaves the split sheet for a page of its own that scrolls like any page */
+  const own = side === "concierge";
   const head = HEADS[side];
   return (
     /* laptops get one sheet under the switch, split in two and running off the bottom of the window: the
        details scroll inside the grey left side, the preview stays put on the white right side, so the page
        itself never scrolls. Below laptop width it's one column and the page scrolls as usual */
-    <main className="relative mx-auto w-full max-w-[600px] px-5 pb-24 pt-[88px] sm:pt-[96px] lg:flex lg:h-svh lg:max-w-[1600px] lg:flex-col lg:px-12 lg:pb-0 lg:pt-[65px]">
+    <main className={`relative mx-auto w-full max-w-[600px] px-5 pb-24 pt-[88px] sm:pt-[96px] lg:flex lg:max-w-[1600px] lg:flex-col lg:px-12 lg:pt-[65px] ${own ? "lg:pb-24" : "lg:h-svh lg:pb-0"}`}>
       {/* the shared pill switch: a light track with a hairline, the white thumb sliding inside it */}
       <Rise i={0} className="flex justify-center lg:pt-8">
         <div role="tablist" aria-label="Customize" className={`${SWITCH_TRACK} w-full sm:w-[320px]`}>
@@ -234,13 +232,33 @@ export default function Customize() {
         </div>
       </Rise>
 
-      <Rise i={1} className="mt-6 lg:mt-7 lg:flex lg:min-h-0 lg:flex-1">
+      {own ? (
+        <div id="customize-panel" role="tabpanel" aria-labelledby={`tab-${side}`} className="mt-10 lg:mt-12">
+            <MyConcierge
+              brief={custom.brief}
+              onChange={(brief) => update({ brief })}
+              saved={!!saved}
+              startWriting={!briefPrimed}
+              onStarted={() => setBriefPrimed(true)}
+              head={
+                <div>
+                  <h2 id="customize-title" className="text-[22px] font-semibold! leading-[1.25]! tracking-[-0.02em]! text-ink">
+                    {head.title}
+                    <Image src={head.emoji} alt="" width={64} height={64} unoptimized className="ml-1.5 inline-block size-[1.1em] -translate-y-[0.08em] align-middle" />
+                  </h2>
+                  <p className="mt-3 text-pretty text-[15px] leading-[1.6] text-ink-2">{head.sub}</p>
+                </div>
+              }
+            />
+        </div>
+      ) : (
+        <Rise i={1} className="mt-6 lg:mt-7 lg:flex lg:min-h-0 lg:flex-1">
         {/* a sheet with a lilac hairline, the same as the divider down its middle: the details sit on a faint lilac that sets the white rows apart, the
             preview on its own canvas with a dot grid, the way a design tool frames what you're making. Split
             838:636 as in the design. Phones skip the sheet's chrome, so the steps keep the full width */}
         <div className="sm:overflow-hidden sm:rounded-[32px] sm:border-[0.5px] sm:border-[#d9d5ea] sm:bg-white lg:grid lg:w-full lg:grid-cols-[minmax(0,838fr)_minmax(0,636fr)] lg:grid-rows-[minmax(0,1fr)] lg:rounded-b-none lg:border-b-0">
-          {/* 69px in from the sheet's edge, less its half-pixel hairline */}
-          <div ref={scroller} id="customize-panel" role="tabpanel" aria-labelledby={`tab-${side}`} className="min-w-0 pt-2 sm:bg-[#f8f8ff] sm:px-8 sm:pb-8 sm:pt-7 lg:overflow-y-auto lg:px-[68.5px] lg:pb-16 lg:pt-[68.5px]">
+          {/* 48px in on every side on laptops, so the title sits higher and the steps run edge to edge with the same gap left and right */}
+          <div ref={scroller} id="customize-panel" role="tabpanel" aria-labelledby={`tab-${side}`} className="min-w-0 pt-2 sm:bg-[#f8f8ff] sm:px-8 sm:pb-8 sm:pt-7 lg:overflow-y-auto lg:px-12 lg:pb-16 lg:pt-12">
             <AnimatePresence mode="wait" initial={false}>
               <Swap key={view} className={COLUMN}>
                 {view === "edit" && editing ? (
@@ -270,7 +288,6 @@ export default function Customize() {
                       <p className="mt-3 text-pretty text-[15px] leading-[1.6] text-ink-2">{head.sub}</p>
                     </In>
                     <In intro={intro} i={3} className="mt-8">
-                      {view === "creators" ? (
                         <Flow
                           handle={handle}
                           custom={custom}
@@ -299,15 +316,6 @@ export default function Customize() {
                             setSide("concierge");
                           }}
                         />
-                      ) : (
-                        <>
-                          <Brief labelledBy="customize-title" brief={custom.brief} onChange={(brief) => update({ brief })} startWriting={!briefPrimed} onStarted={() => setBriefPrimed(true)} />
-                          {/* no room beside it under laptop width, so the chat follows the brief */}
-                          <div className="mt-6 lg:hidden">
-                            <ConciergeChat />
-                          </div>
-                        </>
-                      )}
                     </In>
                   </>
                 )}
@@ -315,37 +323,33 @@ export default function Customize() {
             </AnimatePresence>
           </div>
 
-          {/* the stage. Creators never see the brief, so on that side the phone steps aside for the chat,
-              staying loaded for the way back */}
+          {/* the stage: the phone, running the creator flow as you edit it */}
           {/* white with the dot grid, and the design's lilac wash under it unless the control panel turns it
               off: a soft blur stretched over the side the way the design crops it, faded to white toward the
               bottom right. It fades rather than snapping when switched */}
           <div className="relative hidden border-l-[0.5px] border-[#d9d5ea] bg-white lg:flex lg:flex-col lg:items-center lg:justify-center lg:px-10 lg:py-8">
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-              <div className={`absolute inset-0 transition-opacity duration-500 ${stageBg === "gradient" ? "opacity-100" : "opacity-0"}`}>
+              {/* flipped upside down, so the wash rises from the bottom */}
+              <div className={`absolute inset-0 -scale-y-100 transition-opacity duration-500 ${stageBg === "gradient" ? "opacity-100" : "opacity-0"}`}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/img/customize/stage-bg.png" alt="" className="absolute left-[-1.46%] top-[-80.12%] h-[185.53%] w-[102.92%] max-w-none" />
                 <div className="absolute inset-0 bg-[linear-gradient(-16.54deg,rgba(255,255,255,0.8)_36.65%,rgba(255,255,255,0)_107.49%)]" />
               </div>
               <div className="dot-grid absolute inset-0 opacity-60" />
             </div>
-            <aside aria-label="Live preview" className={`relative flex flex-col items-center ${side === "creators" ? "" : "hidden"}`}>
-              {/* as tall as the sheet allows */}
-              <CreatorPhone glow={false} frameRef={frame} src={`/c/${encodeURIComponent(handle)}?embed=1&customize=1`} className="h-[min(700px,calc(100svh-300px))] min-h-[400px]" />
+            <aside aria-label="Live preview" className="relative flex flex-col items-center">
               {editing ? (
-                <p className="mt-3 flex h-[50px] items-center text-[13px] text-muted">Live preview of what creators see</p>
+                <p className="mb-3 flex h-[50px] items-center text-[13px] text-muted">Live preview of what creators see</p>
               ) : (
                 <Stepper label={STAGES.find((s) => s.id === stage)!.label} at={at} total={seq.length} onGo={goTo} />
               )}
+              {/* as tall as the sheet allows */}
+              <CreatorPhone glow={false} frameRef={frame} src={`/c/${encodeURIComponent(handle)}?embed=1&customize=1`} className="h-[min(700px,calc(100svh-300px))] min-h-[400px]" />
             </aside>
-            {side === "concierge" && (
-              <div className="relative w-full max-w-[400px]">
-                <ConciergeChat />
-              </div>
-            )}
           </div>
         </div>
-      </Rise>
+        </Rise>
+      )}
     </main>
   );
 }
@@ -359,11 +363,13 @@ function Swap({ className, children }: { className?: string; children: ReactNode
   );
 }
 
-/* under the phone: tap through the link the way a creator would; the list on the left follows */
+/* over the phone: tap through the link the way a creator would; the list on the left follows */
 function Stepper({ label, at, total, onGo }: { label: string; at: number; total: number; onGo: (i: number) => void }) {
-  const arrow = "grid size-8 place-items-center rounded-full text-ink-2 transition-[background-color,color,opacity] hover:bg-[#f4f4f6] hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent";
+  /* white discs with a hairline, like the active pill in the switch, so they read on the stage's wash */
+  const arrow =
+    "grid size-9 place-items-center rounded-full bg-white text-ink-2 shadow-[0_1px_2px_rgba(16,16,40,0.06),inset_0_0_0_0.5px_#d9d5ea] transition-[background-color,color,opacity] hover:bg-[#f4f4f6] hover:text-ink disabled:opacity-40 disabled:hover:bg-white";
   return (
-    <div className="mt-3 flex items-center gap-1">
+    <div className="mb-3 flex items-center gap-2">
       <button type="button" aria-label="Previous screen" disabled={at === 0} onClick={() => onGo(at - 1)} className={arrow}>
         <RiArrowLeftSLine size={18} aria-hidden="true" />
       </button>
@@ -469,7 +475,7 @@ function Flow({
   };
 
   const body: Record<Stage, ReactNode> = {
-    welcome: <Message label="Welcome message" hint="The first thing creators read when they open your link." value={custom.welcome} fallback={DEFAULT_CUSTOM.welcome} onChange={onWelcome} />,
+    welcome: <Message label="Welcome message" hint="The first thing creators read when they open your link." value={custom.welcome} fallback={DEFAULT_CUSTOM.welcome} onChange={onWelcome} short />,
     setup: <HowYouWork address={address} onAddress={onAddress} gifted={custom.gifted} onGifted={onGifted} />,
     asked: (
       <>
@@ -609,370 +615,8 @@ function Row({ on, onClick, className = "", children }: { on: boolean; onClick: 
   );
 }
 
-/* ---------- what the Concierge knows: the brief, edited in place ---------- */
-
-/*
-  One long field, like a note: a heading with a sparkle, free text under it, and as many of those as the
-  business wants. Enter on a heading drops to its text; Backspace on an empty heading with nothing under
-  it removes it. Removing one that has writing in it offers an undo.
-*/
-function Brief({
-  labelledBy,
-  brief,
-  onChange,
-  startWriting = false,
-  onStarted,
-}: {
-  labelledBy: string;
-  brief: Custom["brief"];
-  onChange: (b: Custom["brief"]) => void;
-  /* open with the caret at the end of the first section, as if about to type */
-  startWriting?: boolean;
-  onStarted?: () => void;
-}) {
-  const id = useId();
-  const say = useToast();
-  const box = useRef<HTMLDivElement>(null);
-  const focusNext = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!startWriting) return;
-    onStarted?.();
-    /* only where there's a mouse: on a phone, focusing would throw the keyboard up unasked */
-    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
-    const first = brief[0];
-    const last = first && [...(document.getElementById(`${id}-${first.id}`)?.querySelectorAll("textarea") ?? [])].pop();
-    if (!last) return;
-    last.focus({ preventScroll: true });
-    last.setSelectionRange(last.value.length, last.value.length);
-  }, [startWriting, onStarted, brief, id]);
-
-  useEffect(() => {
-    if (!focusNext.current) return;
-    box.current?.querySelector<HTMLElement>(`[data-heading="${focusNext.current}"]`)?.focus();
-    focusNext.current = null;
-  }, [brief]);
-
-  const set = (i: number, patch: Partial<BriefSection>) => onChange(brief.map((s, j) => (j === i ? { ...s, ...patch } : s)));
-  const add = () => {
-    const s = newSection();
-    focusNext.current = s.id;
-    onChange([...brief, s]);
-  };
-  const remove = (i: number) => {
-    const s = brief[i];
-    onChange(brief.filter((_, j) => j !== i));
-    if (s.heading.trim() || s.text.trim()) say(`Removed ${s.heading.trim() ? `“${s.heading.trim()}”` : "a heading"}`, { label: "Undo", run: () => onChange(brief) });
-  };
-
-  return (
-    /* a near-white page of notes on the white side; it turns white with the purple ring while you write */
-    <div
-      ref={box}
-      role="group"
-      aria-labelledby={labelledBy}
-      className="rounded-[20px] border border-[#ececf1] bg-[#fcfcfc] px-5 pb-5 pt-6 shadow-[0_1px_2px_rgba(15,20,40,0.04)] transition-[background-color,box-shadow,border-color] duration-200 focus-within:border-transparent focus-within:bg-white focus-within:shadow-[inset_0_0_0_2px_#8f7cf7,0_0_0_4px_rgba(143,124,247,0.14)] sm:px-7 sm:pt-7"
-    >
-      {brief.map((s, i) => (
-        <div key={s.id} className="group/section mb-6">
-          <div className="flex items-center gap-2">
-            <RiSparkling2Fill size={15} aria-hidden="true" className="shrink-0 text-[#8f7cf7]" />
-            <input
-              data-heading={s.id}
-              aria-label="Heading"
-              value={s.heading}
-              placeholder="New heading"
-              onChange={(e) => set(i, { heading: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  document.getElementById(`${id}-${s.id}`)?.querySelector("textarea")?.focus();
-                } else if (e.key === "Backspace" && !s.heading && !s.text) {
-                  e.preventDefault();
-                  const prev = brief[i - 1];
-                  remove(i);
-                  if (prev) {
-                    const last = [...(document.getElementById(`${id}-${prev.id}`)?.querySelectorAll("textarea") ?? [])].pop();
-                    last?.focus();
-                    last?.setSelectionRange(last.value.length, last.value.length);
-                  }
-                }
-              }}
-              className="min-w-0 flex-1 bg-transparent text-[16px] font-semibold text-ink outline-none placeholder:font-medium placeholder:text-muted"
-            />
-            <button
-              type="button"
-              aria-label={`Remove ${s.heading.trim() || "this heading"}`}
-              onClick={() => remove(i)}
-              className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted opacity-0 transition-[opacity,background-color,color] duration-200 hover:bg-[#ececf1] hover:text-ink focus-visible:opacity-100 group-focus-within/section:opacity-100 group-hover/section:opacity-100"
-            >
-              <RiCloseLine size={16} aria-hidden="true" />
-            </button>
-          </div>
-          <Notes id={`${id}-${s.id}`} label={s.heading.trim() || "Notes"} value={s.text} onChange={(text) => set(i, { text })} />
-        </div>
-      ))}
-      <button
-        type="button"
-        onClick={add}
-        className="-ml-1.5 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[14px] font-semibold text-[#3b25c4] transition-colors duration-200 hover:bg-lilac hover:text-[#2c1aa3]"
-      >
-        <RiAddLine size={17} aria-hidden="true" />
-        Add a heading
-      </button>
-    </div>
-  );
-}
-
-/*
-  The writing under a heading, one line per row so bullets can hang: a line saved with "• " in front is a
-  bullet, and typing "- " at the start of a line turns it into one. Enter starts a new line (a bullet if
-  you were in one; on an empty bullet it goes back to plain text), Backspace at the start drops the bullet,
-  then joins the line onto the one above.
-*/
-type NoteLine = { bullet: boolean; text: string };
-const BULLET = "• ";
-const toLines = (v: string): NoteLine[] => v.split("\n").map((l) => (l.startsWith(BULLET) || l.startsWith("- ") ? { bullet: true, text: l.slice(2) } : { bullet: false, text: l }));
-const fromLines = (ls: NoteLine[]) => ls.map((l) => (l.bullet ? BULLET : "") + l.text).join("\n");
-
-function Notes({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (v: string) => void }) {
-  const lines = toLines(value);
-  const rows = useRef<(HTMLTextAreaElement | null)[]>([]);
-  /* where the caret goes once the next render lands */
-  const caret = useRef<{ i: number; at: number } | null>(null);
-
-  useEffect(() => {
-    if (!caret.current) return;
-    const el = rows.current[caret.current.i];
-    el?.focus();
-    el?.setSelectionRange(caret.current.at, caret.current.at);
-    caret.current = null;
-  });
-
-  const commit = (next: NoteLine[], focus?: { i: number; at: number }) => {
-    if (focus) caret.current = focus;
-    onChange(fromLines(next));
-  };
-  const empty = lines.length === 1 && !lines[0].bullet && !lines[0].text;
-
-  return (
-    <div id={id} role="group" aria-label={label} className="mt-1.5 flex flex-col gap-1.5">
-      {lines.map((l, i) => (
-        <div key={i} className="relative pl-[23px]">
-          {l.bullet && <span aria-hidden="true" className="absolute left-[6px] top-[11px] size-[5px] rounded-full bg-[#c4c4cd]" />}
-          <textarea
-            ref={(el) => {
-              rows.current[i] = el;
-            }}
-            aria-label={l.bullet ? `${label}, bullet` : label}
-            value={l.text}
-            rows={1}
-            placeholder={empty ? "Write anything here" : undefined}
-            onChange={(e) => {
-              const v = e.target.value;
-              const next = [...lines];
-              // pasted lines become lines of their own
-              if (v.includes("\n")) {
-                const [first, ...rest] = toLines(v);
-                next.splice(i, 1, { bullet: l.bullet || first.bullet, text: first.text }, ...rest);
-                commit(next, { i: i + rest.length, at: next[i + rest.length].text.length });
-                return;
-              }
-              if (!l.bullet && v.startsWith("- ")) {
-                next[i] = { bullet: true, text: v.slice(2) };
-                commit(next, { i, at: e.target.selectionStart - 2 });
-                return;
-              }
-              next[i] = { ...l, text: v };
-              onChange(fromLines(next));
-            }}
-            onKeyDown={(e) => {
-              const el = e.currentTarget;
-              const start = el.selectionStart;
-              const flat = start === el.selectionEnd;
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                const next = [...lines];
-                if (l.bullet && !l.text) {
-                  next[i] = { bullet: false, text: "" };
-                  commit(next, { i, at: 0 });
-                  return;
-                }
-                next.splice(i, 1, { ...l, text: l.text.slice(0, start) }, { bullet: l.bullet, text: l.text.slice(el.selectionEnd) });
-                commit(next, { i: i + 1, at: 0 });
-              } else if (e.key === "Backspace" && flat && start === 0) {
-                if (l.bullet) {
-                  e.preventDefault();
-                  commit(lines.map((x, j) => (j === i ? { ...x, bullet: false } : x)), { i, at: 0 });
-                } else if (i > 0) {
-                  e.preventDefault();
-                  const prev = lines[i - 1];
-                  const next = [...lines];
-                  next.splice(i - 1, 2, { ...prev, text: prev.text + l.text });
-                  commit(next, { i: i - 1, at: prev.text.length });
-                }
-              } else if (e.key === "ArrowUp" && flat && start === 0 && i > 0) {
-                e.preventDefault();
-                rows.current[i - 1]?.focus();
-              } else if (e.key === "ArrowDown" && flat && start === l.text.length && i < lines.length - 1) {
-                e.preventDefault();
-                const below = rows.current[i + 1];
-                below?.focus();
-                below?.setSelectionRange(0, 0);
-              }
-            }}
-            className="block w-full resize-none bg-transparent text-[15.5px] leading-[26px] text-ink outline-none [field-sizing:content] placeholder:text-muted"
-          />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/*
-  Where the brief is headed: tuning the Concierge by talking to it. Not live yet, so the conversation
-  plays itself on a loop: the Concierge checks in, the business types a reply, the Concierge takes it on.
-*/
-type Line = { from: "concierge" | "you" | "note"; text: string };
-const SCRIPT: Line[] = [
-  { from: "concierge", text: "Hi! I went through 14 requests for you this week." },
-  { from: "concierge", text: "How have I been doing? Anything you want me to change?" },
-  { from: "you", text: "Great! Only send me creators with an LA audience." },
-  { from: "concierge", text: "Got it. I'll pass on anyone whose audience isn't mostly in Los Angeles." },
-  { from: "note", text: "Added to Who to prioritize" },
-];
-
-function ConciergeChat() {
-  const reduce = useReducedMotion();
-  const [shown, setShown] = useState(reduce ? SCRIPT.length : 0);
-  const [typing, setTyping] = useState(false);
-  const [draft, setDraft] = useState("");
-
-  useEffect(() => {
-    if (reduce) return;
-    let alive = true;
-    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    (async () => {
-      while (alive) {
-        await wait(800);
-        for (let i = 0; i < SCRIPT.length && alive; i++) {
-          const l = SCRIPT[i];
-          if (l.from === "you") {
-            // their reply types itself into the box, then sends
-            await wait(900);
-            for (let c = 1; c <= l.text.length && alive; c++) {
-              setDraft(l.text.slice(0, c));
-              await wait(38);
-            }
-            await wait(500);
-            setDraft("");
-          } else if (l.from === "concierge") {
-            setTyping(true);
-            await wait(1300);
-            setTyping(false);
-          } else {
-            await wait(500);
-          }
-          if (!alive) return;
-          setShown(i + 1);
-          await wait(1000);
-        }
-        await wait(5000);
-        if (!alive) return;
-        setShown(0);
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [reduce]);
-
-  return (
-    <section aria-labelledby="concierge-chat" className="flex h-[540px] flex-col overflow-hidden rounded-[24px] lg:h-[min(560px,calc(100svh-240px))] lg:min-h-[400px] border border-[#ececf1] bg-white shadow-[0_30px_60px_-40px_rgba(40,30,110,0.35)]">
-      <header className="flex items-center gap-3 border-b border-[#ececf1] px-5 py-4">
-        <span className="relative shrink-0">
-          {/* a soft ring breathes while the Concierge is writing */}
-          <motion.span
-            aria-hidden="true"
-            className="absolute -inset-[3px] rounded-full bg-[linear-gradient(135deg,#8f7cf7,#f0a2c6)]"
-            animate={{ opacity: typing ? [0.5, 1, 0.5] : 0.5 }}
-            transition={typing ? { duration: 1.4, repeat: Infinity, ease: "easeInOut" } : { duration: 0.4 }}
-          />
-          <span className="relative block size-10 overflow-hidden rounded-full ring-2 ring-white">
-            <BrandIcon size={40} />
-          </span>
-        </span>
-        <div className="min-w-0 flex-1 leading-tight">
-          <h2 id="concierge-chat" className="text-[15.5px] font-semibold text-ink">
-            Your Concierge
-          </h2>
-          <p className="mt-0.5 truncate text-[13px] text-muted">{typing ? "Typing…" : "Talk it through, soon"}</p>
-        </div>
-        <span className="shrink-0 rounded-full bg-lilac px-2.5 py-1 text-[12px] font-semibold text-[#3b25c4]">Coming soon</span>
-      </header>
-
-      <p className="sr-only">A preview: your Concierge checks in on how it’s doing, and learns from your reply.</p>
-      <div aria-hidden="true" className="flex flex-1 flex-col justify-end gap-2 overflow-hidden px-5 py-4">
-        {/* popLayout: the typing dots leave the flow at once, so the reply takes their place without a gap */}
-        <AnimatePresence initial={false} mode="popLayout">
-          {SCRIPT.slice(0, shown).map((l) => (
-            <motion.div
-              key={l.text}
-              layout
-              initial={{ opacity: 0, y: 10, scale: 0.97 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, transition: { duration: 0.4 } }}
-              transition={{ duration: 0.4, ease: EASE }}
-              className={l.from === "you" ? "self-end" : "self-start"}
-            >
-              {l.from === "note" ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-lilac px-3 py-1.5 text-[13px] font-medium text-[#3b25c4]">
-                  <RiSparkling2Fill size={13} aria-hidden="true" className="text-[#7a5cfa]" />
-                  {l.text}
-                </span>
-              ) : (
-                <p
-                  className={`max-w-[260px] rounded-[18px] px-3.5 py-2 text-[14.5px] leading-snug ${
-                    l.from === "you" ? "rounded-br-[6px] bg-[#5035e3] text-white" : "rounded-bl-[6px] bg-[#f2f2f4] text-ink"
-                  }`}
-                >
-                  {l.text}
-                </p>
-              )}
-            </motion.div>
-          ))}
-          {typing && (
-            <motion.div key="typing" layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="self-start">
-              <span className="flex h-[38px] items-center gap-1 rounded-[18px] rounded-bl-[6px] bg-[#f2f2f4] px-4">
-                {[0, 1, 2].map((d) => (
-                  <motion.span
-                    key={d}
-                    className="size-1.5 rounded-full bg-[#9a9aa8]"
-                    animate={{ y: [0, -3, 0], opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 0.9, repeat: Infinity, delay: d * 0.15, ease: "easeInOut" }}
-                  />
-                ))}
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* not live yet: the box only ever fills with the scripted reply */}
-      <div aria-hidden="true" className="px-4 pb-4">
-        <div className="flex h-12 items-center gap-2 rounded-full border-[0.5px] border-[#e3e3e3] bg-[#fafafa] pl-4 pr-1.5">
-          <span className={`min-w-0 flex-1 truncate text-[14.5px] ${draft ? "text-ink" : "text-muted"}`}>{draft || "Reply to your Concierge"}</span>
-          <span className={`grid size-9 shrink-0 place-items-center rounded-full text-white transition-colors duration-200 ${draft ? "bg-[#5035e3]" : "bg-[#d9d2fb]"}`}>
-            <RiArrowUpLine size={18} />
-          </span>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* a DM the business writes: grows with its text, counts down near the limit, and can go back to ours */
-function Message({ label, hint, value, fallback, onChange }: { label: string; hint: string; value: string; fallback: string; onChange: (v: string) => void }) {
+function Message({ label, hint, value, fallback, onChange, short = false }: { label: string; hint: string; value: string; fallback: string; onChange: (v: string) => void; short?: boolean }) {
   const id = useId();
   const left = MESSAGE_MAX - value.length;
   return (
@@ -983,10 +627,10 @@ function Message({ label, hint, value, fallback, onChange }: { label: string; hi
         value={value}
         maxLength={MESSAGE_MAX}
         onChange={(e) => onChange(e.target.value)}
-        rows={3}
+        rows={short ? 2 : 3}
         placeholder={fallback}
         aria-describedby={`${id}-hint`}
-        className={`${FIELD} block min-h-[96px] resize-none py-3 leading-[22px] [field-sizing:content]`}
+        className={`${FIELD} block ${short ? "min-h-[77px]" : "min-h-[96px]"} resize-none py-3 leading-[22px] [field-sizing:content]`}
       />
       <div className="mt-2.5 flex items-start justify-between gap-3">
         <p id={`${id}-hint`} className={HINT}>
@@ -1084,7 +728,7 @@ function QuestionEditor({
         <div className={CARD}>
           <section className={PANEL}>
             <h2 className={HEADING}>Question</h2>
-            <div className={`mt-3 ${BOX} focus-within:border-transparent focus-within:bg-white focus-within:shadow-[inset_0_0_0_2px_#8f7cf7,0_0_0_4px_rgba(143,124,247,0.14)] transition-[background-color,box-shadow] duration-200`}>
+            <div className={`mt-3 ${BOX} focus-within:border-transparent focus-within:bg-white focus-within:shadow-[inset_0_0_0_2px_#8f7cf7] transition-[background-color,box-shadow] duration-200`}>
               <input
                 aria-label="Question"
                 autoFocus={isNew}

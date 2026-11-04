@@ -1,0 +1,21 @@
+/*
+  The new-email field draws its fill (#fbfbfb) and its stroke with inset shadows. Picking a saved address, or
+  just hovering one in the browser's list, turns on :-webkit-autofill, and the global autofill rule in
+  globals.css covers the field with a 1000px white inset shadow, which wiped both: the box vanished and only
+  the text was left. Here the field repaints its own fill and stroke, stroke first so it sits on top.
+*/
+.change-email-input:-webkit-autofill,
+.change-email-input:-webkit-autofill:hover {
+  -webkit-box-shadow: inset 0 0 0 0.5px #e3e3e3, inset 0 0 0 1000px #fbfbfb;
+  box-shadow: inset 0 0 0 0.5px #e3e3e3, inset 0 0 0 1000px #fbfbfb;
+  -webkit-text-fill-color: #1c1c1c;
+  caret-color: #1c1c1c;
+}
+.change-email-input:-webkit-autofill:focus {
+  -webkit-box-shadow: inset 0 0 0 1px #7a5cfa, inset 0 0 0 1000px #fbfbfb;
+  box-shadow: inset 0 0 0 1px #7a5cfa, inset 0 0 0 1000px #fbfbfb;
+}
+.change-email-input[aria-invalid="true"]:-webkit-autofill {
+  -webkit-box-shadow: inset 0 0 0 1px #c23a56, inset 0 0 0 1000px #fbfbfb;
+  box-shadow: inset 0 0 0 1px #c23a56, inset 0 0 0 1000px #fbfbfb;
+}

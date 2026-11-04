@@ -3,22 +3,16 @@
 import {
   RiArrowDownSLine,
   RiCalendarLine,
-  RiCheckLine,
   RiFlashlightLine,
-  RiPencilLine,
   RiSunLine,
   RiTimeLine,
   type RemixiconComponentType,
 } from "@remixicon/react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
-import { useControls } from "../controls";
-import { BrandIcon } from "../Logo";
-import { displayName } from "../names";
-import { byNewest, CREATORS } from "./data";
-import { useToast } from "./Shell";
-import { recallEmail, rememberEmail, useHandle } from "./store";
-import { EASE, Rise, SWITCH_TAB, SWITCH_TRACK, Thumb } from "./ui";
+import { useSyncExternalStore } from "react";
+import ChangeEmailPanel from "./change-email/ChangeEmail";
+import { useHandle } from "./store";
+import { EASE, Rise } from "./ui";
 
 /* the Share page's pieces, so Settings reads as the same app: a grey stack of white panels, a quiet heading
    on each, and #fafafa wells with a half-pixel hairline inside them */
@@ -26,11 +20,10 @@ const STACK = "flex flex-col gap-1 overflow-hidden rounded-[24px] border border-
 const PANEL = "bg-white px-5 py-5 sm:px-6";
 /* Share's panel heading. These are h2s for screen readers, and the global h2 rule (bold, tight tracking, 1.05
    line height) is unlayered, so it beats plain utilities; the ! puts Share's plain-text values back */
-const HEADING = "text-[14px] font-semibold! leading-snug! tracking-normal! [text-wrap:wrap]! text-[#1c1c1c] sm:leading-4!";
+const HEADING = "text-[16px] font-semibold! leading-[20px]! tracking-[-0.01em]! [text-wrap:wrap]! text-[#1c1c1c]";
 const WELL = "rounded-[20px] border-[0.5px] border-[#e3e3e3] bg-[#fafafa]";
-/* the white secondary pill ("Copy reply") and the dark primary one ("Copy link") */
+/* the white pill ("Copy reply") */
 const SOFT_PILL = "rounded-full border-[0.5px] border-[#e3e3e3] bg-white text-[#1a1a1a] shadow-[0_4px_7px_rgba(0,0,0,0.08)]";
-const DARK_PILL = "inline-flex h-[41px] shrink-0 items-center justify-center gap-2 rounded-full bg-[#111] pl-4 pr-6 text-[14px] font-semibold leading-[17px] text-white transition-[background-color,opacity] duration-200 hover:bg-black";
 
 /*
   Settings: how often the business hears about collab requests, and the email it all goes to.
@@ -135,11 +128,11 @@ function nextDigest(p: Prefs) {
   return `${when} at ${hourLabel(p.hour)}`;
 }
 
-type Option = { id: Freq; title: string; short: string; icon: RemixiconComponentType };
+type Option = { id: Freq; title: string; icon: RemixiconComponentType };
 const FREQS: Option[] = [
-  { id: "instant", title: "Instant", short: "Each request", icon: RiFlashlightLine },
-  { id: "daily", title: "Daily digest", short: "Once a day", icon: RiSunLine },
-  { id: "weekly", title: "Weekly digest", short: "Once a week", icon: RiCalendarLine },
+  { id: "instant", title: "Instant", icon: RiFlashlightLine },
+  { id: "daily", title: "Daily digest", icon: RiSunLine },
+  { id: "weekly", title: "Weekly digest", icon: RiCalendarLine },
 ];
 
 const hint = (f: Freq, p: Prefs) =>
@@ -153,14 +146,10 @@ const hint = (f: Freq, p: Prefs) =>
 
 export default function Settings() {
   const handle = useHandle();
-  const name = displayName(handle);
-  const { settingsLook } = useControls();
   const prefs = useSyncExternalStore(subscribe, readPrefs, () => SERVER);
   const mounted = useSyncExternalStore(noop, () => true, () => false);
   /* every change saves on the spot */
   const set = (patch: Partial<Prefs>) => writePrefs(patch);
-
-  const Look = settingsLook === "b" ? SwitchLook : settingsLook === "c" ? PreviewLook : ListLook;
 
   return (
     <main className="relative mx-auto w-full max-w-[600px] px-5 pb-28 pt-[96px] sm:pt-[112px]">
@@ -171,16 +160,19 @@ export default function Settings() {
       {/* the same title, spacing and grey stack as the Share page */}
       <Rise i={1} className="mt-6">
         <div className={STACK}>
-          <section aria-labelledby="settings-emails" className={PANEL}>
+          <section aria-labelledby="settings-emails" aria-describedby="settings-emails-sub" className={PANEL}>
             <h2 id="settings-emails" className={HEADING}>
-              How often we email you about new collab requests
+              Notifications
             </h2>
-            <div className="mt-3">
-              <Look prefs={prefs} set={set} mounted={mounted} name={name} />
+            <p id="settings-emails-sub" className="mt-1 text-[14px] leading-snug text-muted">
+              How often we email you about new collab requests
+            </p>
+            <div className="mt-4">
+              <ListLook prefs={prefs} set={set} mounted={mounted} />
             </div>
           </section>
           <section aria-labelledby="settings-email" className={PANEL}>
-            <EmailPanel handle={handle} />
+            <ChangeEmailPanel handle={handle} />
           </section>
         </div>
       </Rise>
@@ -188,9 +180,9 @@ export default function Settings() {
   );
 }
 
-type LookProps = { prefs: Prefs; set: (p: Partial<Prefs>) => void; mounted: boolean; name: string };
+type LookProps = { prefs: Prefs; set: (p: Partial<Prefs>) => void; mounted: boolean };
 
-/* ---------- A: one list, the schedule inside the chosen row ---------- */
+/* ---------- one list, the schedule inside the chosen row ---------- */
 
 function ListLook({ prefs, set, mounted }: LookProps) {
   return (
@@ -233,151 +225,6 @@ function ListLook({ prefs, set, mounted }: LookProps) {
       </div>
       <Next prefs={prefs} mounted={mounted} />
     </>
-  );
-}
-
-/* ---------- B: the pill switch picks the rhythm, one sentence holds the schedule ---------- */
-
-function SwitchLook({ prefs, set, mounted }: LookProps) {
-  return (
-    <>
-      <div role="radiogroup" aria-labelledby="settings-emails" className={SWITCH_TRACK}>
-        <Thumb selected={prefs.freq} />
-        {FREQS.map((f) => {
-          const on = prefs.freq === f.id;
-          const I = f.icon;
-          return (
-            <button
-              key={f.id}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              onClick={() => set({ freq: f.id })}
-              className={`${SWITCH_TAB} flex flex-1 basis-0 items-center justify-center gap-1.5 px-2 ${on ? "text-ink" : "text-muted hover:text-ink"}`}
-            >
-              <I size={16} aria-hidden="true" className={`relative transition-colors duration-200 ${on ? "text-[#7a5cfa]" : ""}`} />
-              <span className="relative">{f.id === "instant" ? "Instant" : f.id === "daily" ? "Daily" : "Weekly"}</span>
-            </button>
-          );
-        })}
-      </div>
-      {/* the sentence says what you'll get; its blanks are the controls */}
-      <div className={`mt-3 flex min-h-[76px] flex-wrap items-center gap-x-2 gap-y-2 px-4 py-3.5 text-[15px] leading-[36px] text-ink ${WELL}`}>
-        {prefs.freq === "instant" ? (
-          <span className="leading-snug">We’ll email you about each request as soon as your Concierge has checked it.</span>
-        ) : (
-          <>
-            <span>We’ll email you every</span>
-            <span>{prefs.freq === "weekly" ? DAYS[DIGEST_DAY] : "day"} at</span>
-            <TimePick value={prefs.hour} onChange={(hour) => set({ hour })} />
-            <ZonePick value={prefs.tz} onChange={(tz) => set({ tz })} />
-          </>
-        )}
-      </div>
-      <Next prefs={prefs} mounted={mounted} />
-    </>
-  );
-}
-
-/* ---------- C: tiles pick the rhythm, an inbox preview shows what lands and when ---------- */
-
-function PreviewLook({ prefs, set, mounted, name }: LookProps) {
-  return (
-    <>
-      <div role="radiogroup" aria-labelledby="settings-emails" className="grid grid-cols-3 gap-2">
-        {FREQS.map((f) => {
-          const on = prefs.freq === f.id;
-          const I = f.icon;
-          return (
-            <button
-              key={f.id}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              onClick={() => set({ freq: f.id })}
-              className={`flex flex-col items-start gap-3 rounded-[20px] border-[0.5px] p-3.5 text-left transition-[background-color,border-color,box-shadow] duration-200 sm:p-4 ${
-                on ? "border-[#7a5cfa] bg-lilac shadow-[inset_0_0_0_1px_#7a5cfa]" : "border-[#e3e3e3] bg-[#fafafa] hover:bg-[#f4f4f6]"
-              }`}
-            >
-              <span className={`grid size-9 place-items-center rounded-full bg-white transition-colors duration-200 ${on ? "text-[#7a5cfa]" : "text-ink-2"}`}>
-                <I size={18} aria-hidden="true" />
-              </span>
-              <span className="leading-snug">
-                <span className="block text-[15px] font-semibold text-ink">{f.id === "instant" ? "Instant" : f.id === "daily" ? "Daily" : "Weekly"}</span>
-                <span className="block text-[13px] text-muted">{f.short}</span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* the schedule, only where there is one; the row keeps its place so the preview doesn't jump */}
-      <div className="mt-3 flex min-h-[36px] flex-wrap items-center gap-2">
-        {prefs.freq === "instant" ? (
-          <p className="text-[13px] text-muted">Arrives as soon as your Concierge has checked the request.</p>
-        ) : (
-          <>
-            <span className="mr-1 text-[13px] font-semibold text-ink-2">Arrives{prefs.freq === "weekly" ? ` ${DAYS[DIGEST_DAY]}s` : ""}</span>
-            <TimePick value={prefs.hour} onChange={(hour) => set({ hour })} />
-            <ZonePick value={prefs.tz} onChange={(tz) => set({ tz })} />
-          </>
-        )}
-      </div>
-
-      <InboxPreview prefs={prefs} mounted={mounted} name={name} />
-    </>
-  );
-}
-
-/* what lands in the inbox, built from the real requests so it reads like the email will */
-function InboxPreview({ prefs, mounted, name }: { prefs: Prefs; mounted: boolean; name: string }) {
-  const newest = [...CREATORS].sort(byNewest);
-  const strong = newest.filter((c) => c.fit === "strong");
-  const batch = prefs.freq === "daily" ? newest.slice(0, 4) : newest;
-  const first = newest[0];
-  const mail =
-    prefs.freq === "instant"
-      ? { when: "Just now", subject: `${first.name} wants to collab with ${name}`, body: `Strong fit · ${first.proposal.create}`, people: [first] }
-      : {
-          when: prefs.freq === "daily" ? hourLabel(prefs.hour) : `${DAYS[DIGEST_DAY].slice(0, 3)} ${hourLabel(prefs.hour)}`,
-          subject: prefs.freq === "daily" ? `${batch.length} new collab requests for ${name}` : `This week: ${batch.length} collab requests for ${name}`,
-          body: `${batch[0].name}, ${batch[1].name} and ${batch.length - 2} more. ${batch.filter((c) => c.fit === "strong").length || strong.length} are a strong fit.`,
-          people: batch.slice(0, 3),
-        };
-
-  return (
-    <div className="mt-5">
-      <p className="mb-3 text-[14px] font-semibold leading-4 text-[#1c1c1c]">In your inbox</p>
-      <div className={`p-[11.5px] ${WELL}`}>
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={`${prefs.freq}-${prefs.hour}`}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.25, ease: EASE }}
-            className="flex gap-3 rounded-[16px] border-[0.5px] border-[#e3e3e3] bg-white p-3.5"
-          >
-            <BrandIcon size={36} className="shrink-0" />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="truncate text-[13px] font-semibold text-ink">Collab Concierge</span>
-                <span className="shrink-0 text-[12px] tabular-nums text-muted">{mail.when}</span>
-              </div>
-              <p className="mt-0.5 truncate text-[14.5px] font-semibold text-ink">{mail.subject}</p>
-              <p className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-muted">{mail.body}</p>
-              <div className="mt-2.5 flex -space-x-2">
-                {mail.people.map((c) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img key={c.id} src={c.avatar} alt="" className="size-6 rounded-full object-cover ring-2 ring-white" />
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        </AnimatePresence>
-      </div>
-      <Next prefs={prefs} mounted={mounted} />
-    </div>
   );
 }
 
@@ -459,106 +306,3 @@ const TimePick = ({ value, onChange }: { value: number; onChange: (h: number) =>
 const ZonePick = ({ value, onChange }: { value: string; onChange: (tz: string) => void }) => (
   <SelectPill label="Time zone" value={value} options={zones(value).map((z) => ({ value: z, label: zoneLabel(z) }))} onChange={onChange} grow />
 );
-
-/* ---------- the account email, laid out like "Your link" ---------- */
-
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-
-function EmailPanel({ handle }: { handle: string }) {
-  const say = useToast();
-  const id = useId();
-  const remembered = useSyncExternalStore(noop, () => recallEmail(), () => null);
-  const [changed, setChanged] = useState<string | null>(null);
-  const email = changed ?? remembered ?? `hello@${handle.replace(/[^a-z0-9]/gi, "")}.com`;
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
-  const [error, setError] = useState("");
-  const input = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (editing) input.current?.select();
-  }, [editing]);
-
-  const save = (e: FormEvent) => {
-    e.preventDefault();
-    const next = draft.trim();
-    if (!EMAIL.test(next)) return setError("That doesn’t look like an email address.");
-    rememberEmail(next);
-    setChanged(next);
-    setEditing(false);
-    say(`Requests and sign-in links now go to ${next}.`);
-  };
-
-  /* the pill from "Your link": the value on the left, its one action on the right; phones stack the button */
-  const pill = "mt-3 flex flex-col gap-1.5 rounded-[24px] border-[0.5px] p-1.5 transition-[border-color,box-shadow,background-color] duration-200 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:rounded-full sm:p-[5.5px] sm:pl-[23.5px]";
-
-  return (
-    <>
-      <h2 id="settings-email" className={HEADING}>
-        {editing ? <label htmlFor={id}>Your new email</label> : "Your email"}
-      </h2>
-      {editing ? (
-        <form onSubmit={save} noValidate>
-          <div
-            className={`${pill} ${
-              error ? "border-[#c23a56] bg-white" : "border-transparent bg-white shadow-[inset_0_0_0_2px_#8f7cf7,0_0_0_4px_rgba(143,124,247,0.14)]"
-            }`}
-          >
-            <input
-              ref={input}
-              id={id}
-              type="email"
-              autoComplete="email"
-              value={draft}
-              aria-invalid={!!error}
-              aria-describedby={error ? `${id}-error` : undefined}
-              onChange={(e) => {
-                setDraft(e.target.value);
-                setError("");
-              }}
-              onKeyDown={(e) => e.key === "Escape" && setEditing(false)}
-              className="min-w-0 flex-1 bg-transparent px-3 py-2 text-[16px] font-semibold leading-[19px] text-ink outline-none sm:p-0"
-            />
-            <button type="submit" disabled={!draft.trim()} className={`${DARK_PILL} disabled:opacity-25`}>
-              <RiCheckLine size={18} aria-hidden="true" />
-              Save email
-            </button>
-          </div>
-          <div className="mt-3 flex items-center justify-between gap-3">
-            <p id={`${id}-error`} className="text-[13px] text-[#c23a56]">
-              {error}
-            </p>
-            <button type="button" onClick={() => setEditing(false)} className="shrink-0 text-[15px] font-semibold leading-5 text-ink-2 transition-colors hover:text-ink">
-              Cancel
-            </button>
-          </div>
-        </form>
-      ) : (
-        <>
-          <div className={`${pill} border-[#e3e3e3] bg-[#fafafa]`}>
-            <span className="min-w-0 truncate px-3 py-2 text-[16px] font-semibold leading-[19px] text-ink sm:p-0">{email}</span>
-            <button
-              type="button"
-              onClick={() => {
-                setDraft(email);
-                setError("");
-                setEditing(true);
-              }}
-              className={DARK_PILL}
-            >
-              <RiPencilLine size={16} aria-hidden="true" />
-              Change email
-            </button>
-          </div>
-          {/* like "Test your link": one line under the pill, saying it's confirmed and what goes there */}
-          <p className="mt-3 flex items-start gap-1.5 text-[13px] leading-snug text-muted">
-            <RiCheckLine size={15} aria-hidden="true" className="mt-px shrink-0 text-[#178a60]" />
-            <span>
-              <span className="font-semibold text-[#178a60]">Confirmed.</span> Collab request emails and sign-in links go here.
-            </span>
-          </p>
-        </>
-      )}
-    </>
-  );
-}
