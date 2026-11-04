@@ -102,6 +102,8 @@ export type Screen =
   | { kind: "done" };
 export type PreviewMessage = { type: "cc:customize"; custom: Custom; screen: Screen };
 export const READY = "cc:customize-ready";
+/* the Customize phone's own buttons ask the page to step the preview forward or back */
+export const NAV = "cc:customize-nav";
 
 const key = (handle: string) => `cc:custom:${handle}`;
 const listeners = new Set<() => void>();

@@ -14,7 +14,7 @@ import { FRAME_RATIO, PT_H, PT_W, SCREEN, StatusBar } from "../Phone";
 */
 
 const EASE = [0.22, 1, 0.36, 1] as const;
-const CHROME = 94; // status bar plus Chrome's top address bar
+const CHROME = 98; // status bar plus Chrome's top address bar, with 4pt more room under the Dynamic Island
 
 export default function PreviewDevice({ handle }: { handle: string }) {
   const [run, setRun] = useState(0);

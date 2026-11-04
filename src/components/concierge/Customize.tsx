@@ -16,6 +16,7 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 import {
   ALWAYS_ASKED,
   DEFAULT_CUSTOM,
+  NAV,
   READY,
   describe,
   newQuestion,
@@ -170,6 +171,16 @@ export default function Customize() {
     latest.current = message;
     post();
   });
+  /* a tap on the phone's own buttons moves it a screen, the same as the stepper's arrows */
+  const nav = useRef((by: number) => {});
+  nav.current = (by: number) => {
+    if (!editing) goTo(Math.max(0, Math.min(seq.length - 1, at + by)));
+  };
+  useEffect(() => {
+    const on = (e: MessageEvent) => e.origin === window.location.origin && e.data?.type === NAV && nav.current(e.data.by === -1 ? -1 : 1);
+    window.addEventListener("message", on);
+    return () => window.removeEventListener("message", on);
+  }, []);
   useEffect(() => {
     const on = (e: MessageEvent) => e.origin === window.location.origin && e.data?.type === READY && post();
     window.addEventListener("message", on);

@@ -23,7 +23,7 @@ import { useControls } from "../controls";
 import Logo from "../Logo";
 import { BUSINESS } from "./business";
 import PreviewDevice from "./PreviewDevice";
-import { OTHER, READY, useCustom, type AskedStep, type PreviewMessage, type Question, type Screen } from "./custom";
+import { NAV, OTHER, READY, useCustom, type AskedStep, type PreviewMessage, type Question, type Screen } from "./custom";
 
 /*
   The link a creator gets when they DM the business: one question per screen, a sticky button
@@ -212,6 +212,8 @@ export default function CreatorFlow({ handle: page = business }: { handle?: stri
     return () => window.removeEventListener("message", on);
   }, [edit]);
   const custom = live?.custom ?? stored;
+  /* inside the Customize phone every button is live: it just asks the page for the next (or last) screen */
+  const nav = (by: 1 | -1) => window.parent.postMessage({ type: NAV, by }, window.location.origin);
   const screen: Screen | null = edit ? (live?.screen ?? { kind: "opener" }) : null;
   const step: Step = screen ? SCREEN_STEP(screen) : current;
   const qs = custom.questions;
@@ -437,7 +439,8 @@ export default function CreatorFlow({ handle: page = business }: { handle?: stri
 
   const submit = (e?: FormEvent) => {
     e?.preventDefault();
-    if (edit || !valid[step] || sending) return;
+    if (edit) return nav(1);
+    if (!valid[step] || sending) return;
     if (step === "extra") return void send();
     go(NEXT[step]!, 1, nextQ);
   };
@@ -452,15 +455,16 @@ export default function CreatorFlow({ handle: page = business }: { handle?: stri
 
   return (
     <AutoFocus value={!edit}>
-    <div className="creator-flow relative min-h-svh bg-white">
+    {/* inside the drawn iPhone there's no home-indicator inset, so the buttons get 12px more room off its rounded corners */}
+    <div className="creator-flow relative min-h-svh bg-white" style={mode === "customize" || mode === "embed" ? ({ "--lift": "12px" } as React.CSSProperties) : undefined}>
       <main className="relative flex min-h-svh w-full flex-col">
         {step === "opener" ? (
-          <Opener welcome={custom.welcome} onStart={() => go("socials")} hint={hint("opener")} />
+          <Opener welcome={custom.welcome} onStart={() => (edit ? nav(1) : go("socials"))} hint={hint("opener")} />
         ) : step === "done" ? (
           <Done thanks={custom.thanks} onDone={demo ? share : undefined} hint={hint("done")} />
         ) : (
           <>
-            <TopBar step={at!} onBack={() => go(step === "based" && d.insights === "manual" ? "manual" : BACK[step]!, -1, backQ)} saved={saved} />
+            <TopBar step={at!} onBack={() => edit ? nav(-1) : go(step === "based" && d.insights === "manual" ? "manual" : BACK[step]!, -1, backQ)} saved={saved} />
             <form id="flow" onSubmit={submit} noValidate className={`${COLUMN} flex-1 px-4 pb-8 pt-[17px] sm:px-6 sm:pb-12 sm:pt-12`}>
               <AnimatePresence mode="wait" custom={dir} initial={false}>
                 <motion.div
@@ -515,15 +519,15 @@ export default function CreatorFlow({ handle: page = business }: { handle?: stri
               </AnimatePresence>
               {step === "audience" ? (
                 <>
-                  <Primary type="button" onClick={connect} busy={connecting} hint={hint("audience") && !connecting}>
+                  <Primary type="button" onClick={edit ? () => nav(1) : connect} busy={connecting} hint={hint("audience") && !connecting}>
                     Connect Instagram
                   </Primary>
-                  <button type="button" onClick={() => toManual()} className="mt-1 flex h-12 w-full items-center justify-center text-[16px] font-medium text-[#717171] transition-colors hover:text-[#1c1c1c]">
+                  <button type="button" onClick={() => (edit ? nav(1) : toManual())} className="mt-1 flex h-12 w-full items-center justify-center text-[16px] font-medium text-[#717171] transition-colors hover:text-[#1c1c1c]">
                     Add screenshots instead
                   </button>
                 </>
               ) : (
-                <Primary type="submit" form="flow" disabled={!valid[step]} busy={sending} hint={hint(step) && valid[step]}>
+                <Primary type="submit" form="flow" disabled={!edit && !valid[step]} busy={sending} hint={hint(step) && valid[step]}>
                   {step === "extra" ? (sending ? "Sending…" : "Send my request") : "Next"}
                 </Primary>
               )}
@@ -556,7 +560,7 @@ function Opener({ welcome, onStart, hint = false }: { welcome: string; onStart: 
         </Enter>
       )}
 
-      <div className={`${COLUMN} ${DOCK} pb-[max(30.5px,env(safe-area-inset-bottom))]`}>
+      <div className={`${COLUMN} ${DOCK} pb-[max(calc(30.5px+var(--lift,0px)),env(safe-area-inset-bottom))]`}>
         <button type="button" onClick={onStart} className={CTA}>
           Let&apos;s go
           {hint && <TapHint />}
@@ -589,7 +593,7 @@ function Done({ thanks, onDone, hint = false }: { thanks: string; onDone?: () =>
         </Enter>
       )}
 
-      <div className={`${COLUMN} ${DOCK} pb-[max(21px,env(safe-area-inset-bottom))]`}>
+      <div className={`${COLUMN} ${DOCK} pb-[max(calc(21px+var(--lift,0px)),env(safe-area-inset-bottom))]`}>
         {/* the preview's last tap goes back to the Concierge instead of Instagram */}
         <a
           href={`https://www.instagram.com/${encodeURIComponent(business)}`}
@@ -1391,7 +1395,7 @@ function Footer({ children }: { children: ReactNode }) {
   }, []);
   return (
     <div ref={bar} className={`sticky bottom-0 z-20 mt-auto w-full border-t bg-white transition-colors duration-200 ${under ? "border-[#e3e3e3]" : "border-transparent"}`}>
-      <div className={`${COLUMN} px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-6 sm:pt-4`}>{children}</div>
+      <div className={`${COLUMN} px-4 pb-[max(calc(16px+var(--lift,0px)),env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-6 sm:pt-4`}>{children}</div>
     </div>
   );
 }
