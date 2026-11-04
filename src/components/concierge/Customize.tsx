@@ -9,11 +9,11 @@ import {
   RiArrowUpLine,
   RiCheckLine,
   RiCloseLine,
-  RiEyeLine,
   RiLock2Line,
   RiSparkling2Fill,
 } from "@remixicon/react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import Image from "next/image";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   ALWAYS_ASKED,
@@ -30,11 +30,13 @@ import {
   type Question,
   type Screen,
 } from "../creator/custom";
+import { useControls, type AddressAsk } from "../controls";
 import { CreatorPhone } from "../creator/PreviewDevice";
 import { BrandIcon } from "../Logo";
+import HowYouWork, { modeTitle } from "./HowYouWork";
 import { useToast } from "./Shell";
 import { useHandle } from "./store";
-import { EASE, Rise, Segmented, Thumb } from "./ui";
+import { EASE, Rise, Segmented, SWITCH_TAB, SWITCH_TRACK, Thumb } from "./ui";
 
 /*
   Make it yours, split by who it's for. "What creators see" lists the link's four stages in the order
@@ -45,23 +47,25 @@ import { EASE, Rise, Segmented, Thumb } from "./ui";
 */
 
 type Side = "creators" | "concierge";
-type Stage = "welcome" | "asked" | "yours" | "thanks";
+type Stage = "welcome" | "setup" | "asked" | "yours" | "thanks";
 type Editing = { q: Question; isNew: boolean } | null;
 
 const SIDES: { id: Side; label: string }[] = [
-  { id: "creators", label: "Creators view" },
+  { id: "creators", label: "Creator view" },
   { id: "concierge", label: "My Concierge" },
 ];
-/* what heads the left side of the sheet */
-const HEADS: Record<Side, { title: string; sub: string }> = {
-  creators: { title: "Your creator link 🔗", sub: "Edit what creators see when they open your link, and teach your Concierge who you’re looking for." },
+/* what heads the left side of the sheet; the emoji are pictures so they look the same in every browser */
+const HEADS: Record<Side, { title: string; emoji: string; sub: string }> = {
+  creators: { title: "Your creator link", emoji: "/img/emoji/link.png", sub: "Edit what creators see when they open your link." },
   concierge: {
-    title: "Brief your Concierge 📝",
+    title: "Brief your Concierge",
+    emoji: "/img/emoji/memo.png",
     sub: "Put any context or information here, and write it however you like. The headings are just there to help you, but your Concierge takes in all of it.",
   },
 };
 const STAGES: { id: Stage; label: string }[] = [
   { id: "welcome", label: "Welcome message" },
+  { id: "setup", label: "How you work with creators" },
   { id: "asked", label: "Questions we always ask" },
   { id: "yours", label: "Your questions" },
   { id: "thanks", label: "Thank-you message" },
@@ -74,6 +78,10 @@ const MESSAGE_MAX = 300;
 /* where each stage starts among the screens: the opener, then ours, then theirs, then the thank-you */
 const ASKED_AT = 1;
 const YOURS_AT = ASKED_AT + ALWAYS_ASKED.length;
+/* the screens the setup stage changes: where creators give an address, and the payment question */
+const BASED_AT = ASKED_AT + ALWAYS_ASKED.findIndex((a) => a.step === "based");
+const PAYMENT_AT = ASKED_AT + ALWAYS_ASKED.findIndex((a) => a.step === "payment");
+
 
 /* every screen a creator passes through, in order; with none of their own questions, "yours" is the empty state */
 function screens(qs: Question[]): Screen[] {
@@ -107,9 +115,19 @@ export default function Customize() {
 
   const [side, setSide] = useState<Side>("creators");
   const [pos, setPos] = useState(0);
+  /* the setup stage has no screen of its own; while it's open the phone shows the screens it changes */
+  const [pinned, setPinned] = useState<Stage | null>(null);
+  const goTo = (i: number) => {
+    setPinned(null);
+    setPos(i);
+  };
+  const { address, setAddress, stageBg } = useControls();
   const [editing, setEditingState] = useState<Editing>(null);
   /* the staggered entrance plays on arrival only; after that, swapping views is just the short slide */
   const [swapped, setSwapped] = useState(false);
+  /* the first time the brief opens on this visit it's already in writing mode, caret blinking, so it's
+     plain you can type straight into it; after that it opens at rest */
+  const [briefPrimed, setBriefPrimed] = useState(false);
   const setEditing = (e: Editing) => {
     // the outgoing view lingers for its exit; nothing typed meanwhile should land in its fields
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
@@ -131,8 +149,8 @@ export default function Customize() {
   const qs = custom.questions;
   const seq = screens(qs);
   const at = Math.min(pos, seq.length - 1);
-  const stage = stageOf(seq[at]);
-  const firstOf: Record<Stage, number> = { welcome: 0, asked: ASKED_AT, yours: YOURS_AT, thanks: seq.length - 1 };
+  const stage = pinned ?? stageOf(seq[at]);
+  const firstOf: Record<Stage, number> = { welcome: 0, setup: BASED_AT, asked: ASKED_AT, yours: YOURS_AT, thanks: seq.length - 1 };
 
   /* opening or closing a question, or switching sides, swaps the whole column, so it starts from the top */
   const open = !!editing;
@@ -167,7 +185,7 @@ export default function Customize() {
     const q = { ...editing.q, title: editing.q.title.trim(), sub: editing.q.sub.trim(), answers: editing.q.answers.map((a) => a.trim()).filter(Boolean) };
     const next = editing.isNew ? [...qs, q] : qs.map((x) => (x.id === q.id ? q : x));
     update({ questions: next });
-    setPos(YOURS_AT + next.findIndex((x) => x.id === q.id));
+    goTo(YOURS_AT + next.findIndex((x) => x.id === q.id));
     setEditing(null);
     say(editing.isNew ? "Question added." : "Question updated.");
   };
@@ -175,7 +193,7 @@ export default function Customize() {
     if (!editing) return;
     const before = qs;
     update({ questions: qs.filter((x) => x.id !== editing.q.id) });
-    setPos(YOURS_AT);
+    goTo(YOURS_AT);
     setEditing(null);
     // undo puts the list back onto whatever was edited since, not onto this moment's copy
     say("Question removed.", { label: "Undo", run: () => saveCustom(handle, { ...latest.current.custom, questions: before }) });
@@ -189,13 +207,9 @@ export default function Customize() {
        details scroll inside the grey left side, the preview stays put on the white right side, so the page
        itself never scrolls. Below laptop width it's one column and the page scrolls as usual */
     <main className="relative mx-auto w-full max-w-[600px] px-5 pb-24 pt-[88px] sm:pt-[96px] lg:flex lg:h-svh lg:max-w-[1600px] lg:flex-col lg:px-12 lg:pb-0 lg:pt-[65px]">
-      {/* a pill switch: a light track with a hairline, the white thumb sliding inside it */}
+      {/* the shared pill switch: a light track with a hairline, the white thumb sliding inside it */}
       <Rise i={0} className="flex justify-center lg:pt-8">
-        <div
-          role="tablist"
-          aria-label="Customize"
-          className="relative flex w-full rounded-full bg-[#f1f1f5] p-1 shadow-[inset_0_0_0_1px_#e8e8ee] sm:w-[400px]"
-        >
+        <div role="tablist" aria-label="Customize" className={`${SWITCH_TRACK} w-full sm:w-[320px]`}>
           <Thumb selected={side} />
           {SIDES.map((s) => {
             const on = s.id === side;
@@ -211,7 +225,7 @@ export default function Customize() {
                   setSwapped(true);
                   setSide(s.id);
                 }}
-                className={`relative h-11 flex-1 basis-0 whitespace-nowrap rounded-full px-2 text-[14.5px] font-medium transition-colors duration-200 ${on ? "text-ink" : "text-muted hover:text-ink"}`}
+                className={`${SWITCH_TAB} flex-1 basis-0 px-2 ${on ? "text-ink" : "text-muted hover:text-ink"}`}
               >
                 {s.label}
               </button>
@@ -221,11 +235,12 @@ export default function Customize() {
       </Rise>
 
       <Rise i={1} className="mt-6 lg:mt-7 lg:flex lg:min-h-0 lg:flex-1">
-        {/* a white sheet: the details sit on plain white, the preview on a faintly lilac canvas with a dot grid,
-            the way a design tool frames what you're making. Phones skip the sheet's chrome, so the steps keep
-            the full width */}
-        <div className="sm:overflow-hidden sm:rounded-[28px] sm:border sm:border-[#ebeaf2] sm:bg-white sm:shadow-[0_1px_2px_rgba(40,30,110,0.04),0_24px_60px_-40px_rgba(40,30,110,0.25)] lg:grid lg:w-full lg:grid-cols-[minmax(0,60fr)_minmax(0,40fr)] lg:grid-rows-[minmax(0,1fr)] lg:rounded-b-none lg:border-b-0">
-          <div ref={scroller} id="customize-panel" role="tabpanel" aria-labelledby={`tab-${side}`} className="min-w-0 pt-2 sm:px-8 sm:pb-8 sm:pt-7 lg:overflow-y-auto lg:px-16 lg:pb-16 lg:pt-14">
+        {/* a sheet with a lilac hairline, the same as the divider down its middle: the details sit on a faint lilac that sets the white rows apart, the
+            preview on its own canvas with a dot grid, the way a design tool frames what you're making. Split
+            838:636 as in the design. Phones skip the sheet's chrome, so the steps keep the full width */}
+        <div className="sm:overflow-hidden sm:rounded-[32px] sm:border-[0.5px] sm:border-[#d9d5ea] sm:bg-white lg:grid lg:w-full lg:grid-cols-[minmax(0,838fr)_minmax(0,636fr)] lg:grid-rows-[minmax(0,1fr)] lg:rounded-b-none lg:border-b-0">
+          {/* 69px in from the sheet's edge, less its half-pixel hairline */}
+          <div ref={scroller} id="customize-panel" role="tabpanel" aria-labelledby={`tab-${side}`} className="min-w-0 pt-2 sm:bg-[#f8f8ff] sm:px-8 sm:pb-8 sm:pt-7 lg:overflow-y-auto lg:px-[68.5px] lg:pb-16 lg:pt-[68.5px]">
             <AnimatePresence mode="wait" initial={false}>
               <Swap key={view} className={COLUMN}>
                 {view === "edit" && editing ? (
@@ -244,6 +259,7 @@ export default function Customize() {
                       <div className="flex items-start justify-between gap-4">
                         <h2 id="customize-title" className="text-[22px] font-semibold! leading-[1.25]! tracking-[-0.02em]! text-ink">
                           {head.title}
+                          <Image src={head.emoji} alt="" width={64} height={64} unoptimized className="ml-1.5 inline-block size-[1.1em] -translate-y-[0.08em] align-middle" />
                         </h2>
                         {/* a quiet tick each time a change lands; the slot is always there so nothing shifts */}
                         <span aria-live="polite" className={`mt-1.5 inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold text-[#178a60] transition-opacity duration-300 ${saved ? "opacity-100" : "opacity-0"}`}>
@@ -251,7 +267,7 @@ export default function Customize() {
                           {saved ? "Saved" : ""}
                         </span>
                       </div>
-                      <p className="mt-3 max-w-[560px] text-[15px] leading-[1.6] text-ink-2">{head.sub}</p>
+                      <p className="mt-3 text-pretty text-[15px] leading-[1.6] text-ink-2">{head.sub}</p>
                     </In>
                     <In intro={intro} i={3} className="mt-8">
                       {view === "creators" ? (
@@ -260,13 +276,21 @@ export default function Customize() {
                           custom={custom}
                           stage={stage}
                           screen={seq[at]}
-                          onStage={(s) => setPos(firstOf[s])}
-                          onScreen={setPos}
+                          onStage={(s) => {
+                            setPos(firstOf[s]);
+                            setPinned(s === "setup" ? s : null);
+                          }}
+                          onScreen={goTo}
+                          address={address}
+                          onAddress={(a) => {
+                            setAddress(a);
+                            setPos(BASED_AT);
+                          }}
                           onWelcome={(welcome) => update({ welcome })}
                           onThanks={(thanks) => update({ thanks })}
                           onGifted={(gifted) => {
                             update({ gifted });
-                            setPos(ASKED_AT + ALWAYS_ASKED.findIndex((a) => a.step === "payment"));
+                            setPos(PAYMENT_AT);
                           }}
                           onEdit={(q) => setEditing({ q, isNew: false })}
                           onAdd={() => setEditing({ q: newQuestion(), isNew: true })}
@@ -277,7 +301,7 @@ export default function Customize() {
                         />
                       ) : (
                         <>
-                          <Brief labelledBy="customize-title" brief={custom.brief} onChange={(brief) => update({ brief })} />
+                          <Brief labelledBy="customize-title" brief={custom.brief} onChange={(brief) => update({ brief })} startWriting={!briefPrimed} onStarted={() => setBriefPrimed(true)} />
                           {/* no room beside it under laptop width, so the chat follows the brief */}
                           <div className="mt-6 lg:hidden">
                             <ConciergeChat />
@@ -293,18 +317,25 @@ export default function Customize() {
 
           {/* the stage. Creators never see the brief, so on that side the phone steps aside for the chat,
               staying loaded for the way back */}
-          <div className="relative hidden border-l border-[#ebeaf2] bg-[#f8f7fc] lg:flex lg:flex-col lg:items-center lg:justify-center lg:px-10 lg:py-8">
-            <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          {/* white with the dot grid, and the design's lilac wash under it unless the control panel turns it
+              off: a soft blur stretched over the side the way the design crops it, faded to white toward the
+              bottom right. It fades rather than snapping when switched */}
+          <div className="relative hidden border-l-[0.5px] border-[#d9d5ea] bg-white lg:flex lg:flex-col lg:items-center lg:justify-center lg:px-10 lg:py-8">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+              <div className={`absolute inset-0 transition-opacity duration-500 ${stageBg === "gradient" ? "opacity-100" : "opacity-0"}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/img/customize/stage-bg.png" alt="" className="absolute left-[-1.46%] top-[-80.12%] h-[185.53%] w-[102.92%] max-w-none" />
+                <div className="absolute inset-0 bg-[linear-gradient(-16.54deg,rgba(255,255,255,0.8)_36.65%,rgba(255,255,255,0)_107.49%)]" />
+              </div>
               <div className="dot-grid absolute inset-0 opacity-60" />
-              <div className="absolute inset-0 bg-[radial-gradient(closest-side_at_50%_48%,rgba(143,108,247,0.14),rgba(242,134,154,0.05)_65%,transparent)]" />
             </div>
             <aside aria-label="Live preview" className={`relative flex flex-col items-center ${side === "creators" ? "" : "hidden"}`}>
               {/* as tall as the sheet allows */}
-              <CreatorPhone frameRef={frame} src={`/c/${encodeURIComponent(handle)}?embed=1&customize=1`} className="h-[min(700px,calc(100svh-300px))] min-h-[400px]" />
+              <CreatorPhone glow={false} frameRef={frame} src={`/c/${encodeURIComponent(handle)}?embed=1&customize=1`} className="h-[min(700px,calc(100svh-300px))] min-h-[400px]" />
               {editing ? (
                 <p className="mt-3 flex h-[50px] items-center text-[13px] text-muted">Live preview of what creators see</p>
               ) : (
-                <Stepper label={STAGES.find((s) => s.id === stage)!.label} at={at} total={seq.length} onGo={setPos} />
+                <Stepper label={STAGES.find((s) => s.id === stage)!.label} at={at} total={seq.length} onGo={goTo} />
               )}
             </aside>
             {side === "concierge" && (
@@ -361,6 +392,8 @@ function Flow({
   onWelcome,
   onThanks,
   onGifted,
+  address,
+  onAddress,
   onEdit,
   onAdd,
   onConcierge,
@@ -374,6 +407,8 @@ function Flow({
   onWelcome: (v: string) => void;
   onThanks: (v: string) => void;
   onGifted: (v: boolean) => void;
+  address: AddressAsk;
+  onAddress: (v: AddressAsk) => void;
   onEdit: (q: Question) => void;
   onAdd: () => void;
   onConcierge: () => void;
@@ -414,6 +449,7 @@ function Flow({
 
   const summary: Record<Stage, string> = {
     welcome: custom.welcome.trim() || "None. Creators go straight to the button.",
+    setup: `${modeTitle(address)}${custom.gifted ? " · Gifted collabs first" : ""}`,
     asked: "Socials, collab idea, payment, audience, address, contact",
     yours: qs.length ? qs.map((q) => q.title).join(" · ") : `None yet. Add up to ${MAX_QUESTIONS}.`,
     thanks: custom.thanks.trim() || "None.",
@@ -434,6 +470,7 @@ function Flow({
 
   const body: Record<Stage, ReactNode> = {
     welcome: <Message label="Welcome message" hint="The first thing creators read when they open your link." value={custom.welcome} fallback={DEFAULT_CUSTOM.welcome} onChange={onWelcome} />,
+    setup: <HowYouWork address={address} onAddress={onAddress} gifted={custom.gifted} onGifted={onGifted} />,
     asked: (
       <>
         <ul className={BOX}>
@@ -445,10 +482,6 @@ function Flow({
             </li>
           ))}
         </ul>
-        {/* a note under the payment question, for businesses that mostly do gifted collabs */}
-        <div className={`mt-2 ${BOX}`}>
-          <Toggle label="Prefer gifted collabs" hint="Adds a note to the payment question: you usually prioritize gifted collabs." on={custom.gifted} onChange={onGifted} />
-        </div>
         <p className={`mt-2.5 ${HINT}`}>
           Your Concierge sorts requests using these answers.{" "}
           <button type="button" onClick={onConcierge} className="font-semibold text-[#3b25c4] transition-colors hover:text-[#2c1aa3]">
@@ -513,50 +546,46 @@ function Flow({
         </a>
       </div>
 
-      <ol ref={list} className="relative">
-        {/* the thread that ties the stages into one flow */}
-        <span aria-hidden="true" className="absolute bottom-8 left-[15.5px] top-8 w-px bg-[#e1e1e8]" />
+      {/* one stack of white rows on the lilac side, a few pixels apart so the lilac shows between them:
+          round at the ends, nearly square where they meet, each with a faint lilac hairline that deepens on
+          the open one. The number sits inside each row, filled purple on the one that's open */}
+      <ol ref={list} className="flex flex-col gap-[5px]">
         {STAGES.map((s, i) => {
           const on = stage === s.id;
           return (
-            <li key={s.id} data-stage={s.id} className="relative grid grid-cols-[32px_minmax(0,1fr)] gap-3 pb-3 last:pb-0">
-              <span
-                aria-hidden="true"
-                className={`relative mt-[15px] grid size-8 place-items-center rounded-full text-[13px] font-semibold tabular-nums ring-4 ring-bg sm:ring-white transition-colors duration-200 ${
-                  on ? "bg-ink text-white" : "bg-white text-ink-2 shadow-[inset_0_0_0_0.5px_#d9d9df]"
-                }`}
-              >
-                {i + 1}
-              </span>
-              <div
-                className={`overflow-hidden rounded-[20px] border bg-white transition-[border-color,box-shadow] duration-200 ${
-                  on ? "border-ink shadow-[inset_0_0_0_0.5px_var(--ink),0_18px_40px_-28px_rgba(22,26,53,0.45)]" : "border-[#ececf1] hover:border-[#dcdce4]"
-                }`}
-              >
-                <button type="button" aria-expanded={on} onClick={() => onStage(s.id)} className="flex w-full items-center gap-3 px-5 py-4 text-left">
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-2 text-[15.5px] font-semibold text-ink">
-                      {s.label}
-                      {on && (
-                        <span className="hidden items-center gap-1 rounded-full bg-lilac px-2 py-0.5 text-[11.5px] font-semibold text-[#3b25c4] lg:inline-flex">
-                          <RiEyeLine size={12} aria-hidden="true" />
-                          In the preview
-                        </span>
-                      )}
-                    </span>
-                    {!on && <span className="mt-0.5 block truncate text-[13.5px] text-muted">{summary[s.id]}</span>}
-                  </span>
-                  {meta[s.id]}
-                  <RiArrowDownSLine size={18} aria-hidden="true" className={`shrink-0 text-muted transition-transform duration-300 ${on ? "rotate-180" : ""}`} />
-                </button>
-                <AnimatePresence initial={false}>
-                  {on && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.32, ease: EASE }} className="overflow-hidden">
-                      <div className="px-5 pb-5">{body[s.id]}</div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+            <li
+              key={s.id}
+              data-stage={s.id}
+              className={`overflow-hidden rounded-[6px] border-[0.5px] bg-white transition-[border-color,box-shadow] duration-200 first:rounded-t-[24px] last:rounded-b-[24px] ${
+                on ? "border-[#ddd3f6] shadow-[0_1px_2px_rgba(30,40,80,0.04),0_14px_34px_-22px_rgba(30,40,80,0.22)]" : "border-[#f1eef9]"
+              }`}
+            >
+              <button type="button" aria-expanded={on} onClick={() => onStage(s.id)} className="group flex w-full items-center gap-4 px-5 py-[18px] text-left sm:px-6">
+                <span
+                  aria-hidden="true"
+                  className={`grid size-7 shrink-0 place-items-center rounded-full text-[13px] font-semibold tabular-nums transition-colors duration-200 ${
+                    on ? "bg-[#7a5cfa] text-white" : "bg-[#efecfd] text-[#5035e3] group-hover:bg-[#e5e0fc]"
+                  }`}
+                >
+                  {i + 1}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[16px] font-semibold text-ink">{s.label}</span>
+                  {!on && <span className="mt-0.5 block truncate text-[13.5px] text-muted">{summary[s.id]}</span>}
+                </span>
+                {meta[s.id]}
+                <span className="grid size-8 shrink-0 place-items-center rounded-full text-muted transition-colors duration-200 group-hover:bg-[#f2f2f6] group-hover:text-ink">
+                  <RiArrowDownSLine size={20} aria-hidden="true" className={`transition-transform duration-300 ${on ? "rotate-180" : ""}`} />
+                </span>
+              </button>
+              <AnimatePresence initial={false}>
+                {on && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.32, ease: EASE }} className="overflow-hidden">
+                    {/* lined up under the title, past the number */}
+                    <div className="px-5 pb-6 sm:pl-[68px] sm:pr-[23px]">{body[s.id]}</div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </li>
           );
         })}
@@ -572,9 +601,9 @@ function Row({ on, onClick, className = "", children }: { on: boolean; onClick: 
       type="button"
       onClick={onClick}
       aria-current={on || undefined}
-      className={`flex w-full items-center gap-3 px-4 py-3 text-left text-[14.5px] transition-colors ${on ? "bg-[#f0f0f3] font-medium text-ink" : "text-ink-2 hover:bg-[#f4f4f6] hover:text-ink"} ${className}`}
+      className={`flex w-full items-center gap-3 px-4 py-3 text-left text-[14.5px] transition-colors ${on ? "bg-lilac font-medium text-ink" : "text-ink-2 hover:bg-[#f4f4f6] hover:text-ink"} ${className}`}
     >
-      <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full transition-colors ${on ? "bg-ink" : "bg-[#d4d4de]"}`} />
+      <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full transition-colors ${on ? "bg-[#5035e3]" : "bg-[#d4d4de]"}`} />
       {children}
     </button>
   );
@@ -587,11 +616,36 @@ function Row({ on, onClick, className = "", children }: { on: boolean; onClick: 
   business wants. Enter on a heading drops to its text; Backspace on an empty heading with nothing under
   it removes it. Removing one that has writing in it offers an undo.
 */
-function Brief({ labelledBy, brief, onChange }: { labelledBy: string; brief: Custom["brief"]; onChange: (b: Custom["brief"]) => void }) {
+function Brief({
+  labelledBy,
+  brief,
+  onChange,
+  startWriting = false,
+  onStarted,
+}: {
+  labelledBy: string;
+  brief: Custom["brief"];
+  onChange: (b: Custom["brief"]) => void;
+  /* open with the caret at the end of the first section, as if about to type */
+  startWriting?: boolean;
+  onStarted?: () => void;
+}) {
   const id = useId();
   const say = useToast();
   const box = useRef<HTMLDivElement>(null);
   const focusNext = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!startWriting) return;
+    onStarted?.();
+    /* only where there's a mouse: on a phone, focusing would throw the keyboard up unasked */
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    const first = brief[0];
+    const last = first && [...(document.getElementById(`${id}-${first.id}`)?.querySelectorAll("textarea") ?? [])].pop();
+    if (!last) return;
+    last.focus({ preventScroll: true });
+    last.setSelectionRange(last.value.length, last.value.length);
+  }, [startWriting, onStarted, brief, id]);
 
   useEffect(() => {
     if (!focusNext.current) return;
@@ -1015,7 +1069,7 @@ function QuestionEditor({
           <button type="button" onClick={onCancel} className="-ml-3 h-10 justify-self-start rounded-full px-3 text-[15px] font-semibold text-ink-2 transition-colors hover:bg-white hover:text-ink">
             Cancel
           </button>
-          <h1 className="text-[18px] font-semibold tracking-[-0.01em] text-ink">{isNew ? "New question" : "Edit question"}</h1>
+          <h1 className="font-sans! text-[18px] font-semibold! leading-tight! tracking-[-0.01em]! text-ink">{isNew ? "New question" : "Edit question"}</h1>
           <button
             type="submit"
             disabled={!ready}

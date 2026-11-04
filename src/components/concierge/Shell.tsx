@@ -1,6 +1,18 @@
 "use client";
 
-import { RiArrowDownSLine, RiArrowLeftLine, RiInbox2Fill, RiInbox2Line, RiLogoutBoxRLine, RiPaletteFill, RiPaletteLine, RiShareForwardFill, RiShareForwardLine } from "@remixicon/react";
+import {
+  RiAddLine,
+  RiArrowDownSLine,
+  RiArrowLeftLine,
+  RiInbox2Fill,
+  RiInbox2Line,
+  RiLogoutBoxRLine,
+  RiPaletteFill,
+  RiPaletteLine,
+  RiSettings3Line,
+  RiShareForwardFill,
+  RiShareForwardLine,
+} from "@remixicon/react";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -21,7 +33,7 @@ type Toast = { msg: string; action?: { label: string; run: () => void } };
 const ToastContext = createContext<(msg: string, action?: Toast["action"]) => void>(() => {});
 export const useToast = () => useContext(ToastContext);
 
-const LIVE = ["/share", "/requests", "/customize"];
+const LIVE = ["/share", "/requests", "/customize", "/settings"];
 
 export default function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -40,13 +52,11 @@ export default function Shell({ children }: { children: ReactNode }) {
   return (
     <ToastContext value={say}>
       <div className="relative min-h-svh overflow-x-clip bg-bg">
-        {/* the glow and dots stay pinned to the viewport while the page scrolls over them; Customize splits
-            the screen into flat panels, so it goes without */}
-        {pathname !== "/customize" && (
-          <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden">
-            <Backdrop />
-          </div>
-        )}
+        {/* the glow and dots stay pinned to the viewport while the page scrolls over them; Customize keeps
+            just the dots, fading out down the window, without the glow */}
+        <div aria-hidden="true" className="pointer-events-none fixed inset-0 overflow-hidden">
+          {pathname === "/customize" ? <Dots /> : <Backdrop />}
+        </div>
 
         {/* inside the Concierge the nav is an app bar: full width, flush with the top edge, frosted so the
             page scrolls softly under it; brand and account sit out at the edges, 48px in on laptops */}
@@ -125,15 +135,17 @@ function Backdrop() {
   return (
     <>
       <div className="absolute left-1/2 top-[-260px] h-[620px] w-[1100px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(143,108,247,0.22),rgba(242,134,154,0.08)_60%,transparent)] blur-2xl" />
-      <div className="dot-grid absolute inset-x-0 top-0 h-[520px] [mask-image:linear-gradient(to_bottom,#000,transparent)]" />
+      <Dots />
     </>
   );
 }
 
+const Dots = () => <div className="dot-grid absolute inset-x-0 top-0 h-[520px] [mask-image:linear-gradient(to_bottom,#000,transparent)]" />;
+
 /*
-  Share, Requests and Customize are real pages, so the switch is navigation. Airbnb-style: centred, an icon
-  beside each label (filled on the page you're on) and a dark underline on the bar's edge that slides
-  between them. Phones stack the icon over a small label.
+  Share, Requests and Customize are real pages, so the switch is navigation: centred, an icon beside each
+  label, and the page you're on sits in a purple pill with its icon filled and its label in white. Phones
+  stack the icon over a small label.
 */
 const PAGES = [
   { href: "/share", label: "Share", icon: RiShareForwardLine, on: RiShareForwardFill },
@@ -142,21 +154,23 @@ const PAGES = [
 ];
 
 /*
-  The dark line is one element that moves to the tab you're on, placed from the tab's offset inside the
-  bar. A shared layoutId measured it against the page instead, so when the next page started back at the
-  top the line flew in from wherever you'd scrolled to.
+  Every tab is pill-sized (8px down) whether it's lit or not, 26px apart, so the labels never move when you
+  switch. The side after the label is padded by the gap plus the icon's side (8 + 14 = 22px) so the pill
+  reads balanced around the icon-and-label pair rather than heavy on the icon. The pill itself is one element behind them that slides to the tab you're on, placed from
+  the tab's offset inside the bar. A shared layoutId measured it against the page instead, so when the next
+  page started back at the top it flew in from wherever you'd scrolled to.
 */
 function Pages({ pathname, handle }: { pathname: string; handle: string }) {
   const q = `?handle=${encodeURIComponent(handle)}`;
   const bar = useRef<HTMLDivElement>(null);
-  const [line, setLine] = useState<{ x: number; width: number } | null>(null);
+  const [pill, setPill] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
   useLayoutEffect(() => {
     const el = bar.current;
     if (!el) return;
     const place = () => {
       const tab = el.querySelector<HTMLElement>('[aria-current="page"]');
-      setLine(tab ? { x: tab.offsetLeft + 10, width: tab.offsetWidth - 20 } : null);
+      setPill(tab ? { x: tab.offsetLeft, y: tab.offsetTop, width: tab.offsetWidth, height: tab.offsetHeight } : null);
     };
     place();
     const ro = new ResizeObserver(place);
@@ -165,13 +179,13 @@ function Pages({ pathname, handle }: { pathname: string; handle: string }) {
   }, [pathname]);
 
   return (
-    <div ref={bar} className="relative flex h-full items-stretch sm:gap-3">
-      {line && (
+    <div ref={bar} className="relative flex h-full items-center gap-1 sm:gap-[26px]">
+      {pill && (
         <motion.span
           aria-hidden="true"
-          className="absolute -bottom-px left-0 z-10 h-[3px] rounded-full bg-ink"
+          className="absolute left-0 top-0 rounded-[16px] border-[0.5px] border-[#ebe5f8] bg-[#7a5cfa] sm:rounded-[40px]"
           initial={false}
-          animate={line}
+          animate={pill}
           transition={{ duration: 0.4, ease: EASE }}
         />
       )}
@@ -183,16 +197,10 @@ function Pages({ pathname, handle }: { pathname: string; handle: string }) {
             key={p.href}
             href={p.href + q}
             aria-current={on ? "page" : undefined}
-            className="group relative flex flex-col items-center justify-center gap-0.5 px-3 sm:flex-row sm:gap-2 sm:px-3.5"
+            className={`group relative flex flex-col items-center justify-center gap-0.5 rounded-[16px] px-3 py-1.5 transition-colors duration-200 sm:flex-row sm:gap-2 sm:rounded-[40px] sm:pl-[14px] sm:pr-[22px] sm:py-2 ${on ? "" : "hover:bg-[#f4f4f6]"}`}
           >
-            <Icon
-              size={20}
-              aria-hidden="true"
-              className={`transition-[color,transform] duration-200 group-hover:scale-110 ${on ? "text-[#5035e3]" : "text-[#9a9aa8] group-hover:text-ink-2"}`}
-            />
-            <span className={`text-[11.5px] font-semibold transition-colors duration-200 sm:text-[14.5px] ${on ? "text-ink" : "text-muted group-hover:text-ink"}`}>{p.label}</span>
-            {/* a grey line previews the hover; the dark one marks where you are */}
-            <span aria-hidden="true" className="absolute inset-x-2.5 -bottom-px h-[3px] rounded-full bg-[#dcdce3] opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+            <Icon size={20} aria-hidden="true" className={`transition-colors duration-200 ${on ? "text-white" : "text-[#9a9aa8] group-hover:text-ink-2"}`} />
+            <span className={`text-[11.5px] font-semibold transition-colors duration-200 sm:text-[14.5px] sm:leading-[22px] ${on ? "text-white" : "text-muted group-hover:text-ink"}`}>{p.label}</span>
           </Link>
         );
       })}
@@ -200,7 +208,9 @@ function Pages({ pathname, handle }: { pathname: string; handle: string }) {
   );
 }
 
-/* the avatar opens a small account card: who's signed in, and a way out */
+const MENU_ITEM = "flex w-full items-center gap-2.5 rounded-[14px] px-3 py-2.5 text-left text-[14px] font-medium text-ink-2 transition-colors hover:bg-lilac hover:text-ink";
+
+/* the avatar opens a small account card: who's signed in, settings, another Concierge, and a way out */
 function Account({ handle }: { handle: string }) {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
@@ -253,8 +263,17 @@ function Account({ handle }: { handle: string }) {
                 <div className="mt-0.5 truncate text-[13px] text-muted">{email ?? `@${handle}`}</div>
               </div>
             </div>
-            <div className="mx-2 h-px bg-line" />
-            <Link href="/" className="mt-1 flex items-center gap-2.5 rounded-[14px] px-3 py-2.5 text-[14px] font-medium text-ink-2 transition-colors hover:bg-lilac hover:text-ink">
+            <div className="mx-2 mb-1 h-px bg-line" />
+            {/* another Concierge starts where the first one did, at the handle field on the home page */}
+            <Link href={`/settings?handle=${encodeURIComponent(handle)}`} onClick={() => setOpen(false)} className={MENU_ITEM}>
+              <RiSettings3Line size={17} aria-hidden="true" />
+              Settings
+            </Link>
+            <Link href="/#hero-claim" onClick={() => setOpen(false)} className={MENU_ITEM}>
+              <RiAddLine size={17} aria-hidden="true" />
+              Add another Concierge
+            </Link>
+            <Link href="/" className={MENU_ITEM}>
               <RiLogoutBoxRLine size={17} aria-hidden="true" />
               Sign out
             </Link>

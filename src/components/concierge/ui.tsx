@@ -9,6 +9,11 @@ import { Avatar } from "../HandleForm";
 
 export const EASE = [0.22, 1, 0.36, 1] as const;
 
+/* the page-level tab switch (Customize's sides, Requests' filters): a light pill track with a hairline and
+   the white Thumb sliding inside it. 36px tabs, so the whole switch stands 44px tall */
+export const SWITCH_TRACK = "relative flex rounded-full bg-[#f1f1f5] p-1 shadow-[inset_0_0_0_1px_#e8e8ee]";
+export const SWITCH_TAB = "relative h-9 whitespace-nowrap rounded-full text-[14px] font-medium transition-colors duration-200";
+
 export function Rise({ i, children, className = "" }: { i: number; children: ReactNode; className?: string }) {
   return (
     <motion.div className={className} initial={{ opacity: 0, y: 16, filter: "blur(6px)" }} animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} transition={{ duration: 0.7, ease: EASE, delay: 0.08 + i * 0.08 }}>
@@ -49,7 +54,13 @@ export function StepIcon({ state }: { state: "done" | "working" | "waiting" }) {
   );
 }
 
-export function copyText(text: string, then: () => void) {
+/* html, when given, goes on the clipboard beside the plain text, so links stay links where rich text pastes */
+export function copyText(text: string, then: () => void, html?: string) {
+  if (html && typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+    const item = new ClipboardItem({ "text/plain": new Blob([text], { type: "text/plain" }), "text/html": new Blob([html], { type: "text/html" }) });
+    navigator.clipboard.write([item]).then(then, () => navigator.clipboard.writeText(text).then(then, then));
+    return;
+  }
   navigator.clipboard?.writeText(text).then(then, then);
 }
 
@@ -58,16 +69,20 @@ function useCopied() {
   const [copied, setCopied] = useState(false);
   const t = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(t.current), []);
-  const copy = (text: string) =>
-    copyText(text, () => {
-      setCopied(true);
-      clearTimeout(t.current);
-      t.current = setTimeout(() => setCopied(false), 1500);
-    });
+  const copy = (text: string, html?: string) =>
+    copyText(
+      text,
+      () => {
+        setCopied(true);
+        clearTimeout(t.current);
+        t.current = setTimeout(() => setCopied(false), 1500);
+      },
+      html,
+    );
   return [copied, copy] as const;
 }
 
-export function CopyButton({ text, label, dark = false, className = "" }: { text: string; label: string; dark?: boolean; className?: string }) {
+export function CopyButton({ text, html, label, dark = false, className = "" }: { text: string; html?: string; label: string; dark?: boolean; className?: string }) {
   const [copied, copy] = useCopied();
   const tone = copied
     ? "border-transparent bg-[#1f9d55] text-white"
@@ -77,7 +92,7 @@ export function CopyButton({ text, label, dark = false, className = "" }: { text
   return (
     <button
       type="button"
-      onClick={() => copy(text)}
+      onClick={() => copy(text, html)}
       aria-live="polite"
       className={`inline-flex h-[41px] shrink-0 items-center justify-center gap-2 rounded-full text-[14px] font-semibold leading-[17px] transition-colors duration-200 ${
         dark ? "pl-4 pr-6" : "border-[0.5px] pl-[15.5px] pr-[23.5px] shadow-[0_4px_7px_rgba(0,0,0,0.08)]"
@@ -166,7 +181,16 @@ export function SectionLabel({ children, right, className = "" }: { children: Re
   against the page instead, so arriving from another page (scrolled, or mid-entrance) sent it flying in
   from across the screen. `selected` is only there to re-place it when the choice changes.
 */
-export function Thumb({ selected, rounded = "rounded-full" }: { selected: string; rounded?: string }) {
+export function Thumb({
+  selected,
+  rounded = "rounded-full",
+  fill = "bg-white shadow-[0_1px_2px_rgba(15,20,40,0.08),0_4px_12px_-4px_rgba(15,20,40,0.18)]",
+}: {
+  selected: string;
+  rounded?: string;
+  /* its colour and lift; white and raised unless a switch needs otherwise */
+  fill?: string;
+}) {
   const ref = useRef<HTMLSpanElement>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
@@ -207,7 +231,7 @@ export function Thumb({ selected, rounded = "rounded-full" }: { selected: string
       ref={ref}
       aria-hidden="true"
       style={{ x, y, width, height }}
-      className={`absolute left-0 top-0 ${rounded} bg-white shadow-[0_1px_2px_rgba(15,20,40,0.08),0_4px_12px_-4px_rgba(15,20,40,0.18)]`}
+      className={`absolute left-0 top-0 ${rounded} ${fill}`}
     />
   );
 }

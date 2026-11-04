@@ -8,7 +8,7 @@ import { CREATORS, FIT, FIT_ORDER, byNewest, shortDate, type Creator, type Fit, 
 import RequestPanel from "./RequestPanel";
 import { useToast } from "./Shell";
 import { markSeen, setStatus, useHandle, useSeen, useStatuses } from "./store";
-import { EASE, Rise, Thumb } from "./ui";
+import { EASE, Rise, SWITCH_TAB, SWITCH_TRACK, Thumb } from "./ui";
 
 type Tab = "new" | "interested" | "declined";
 
@@ -96,9 +96,9 @@ export default function Requests() {
 
       {/* one filter: which requests you're looking at */}
       <Rise i={1} className="mt-6">
-        {/* the header switch's treatment: cooler grey track with a soft inset, so the white thumb stands out */}
-        <div role="tablist" aria-label="Collab requests" className="relative flex rounded-[14px] bg-[#eef0f3] p-1 shadow-[inset_0_1px_2px_rgba(15,20,40,0.06)]">
-          <Thumb selected={tab} rounded="rounded-[10px]" />
+        {/* the same pill switch as Customize's */}
+        <div role="tablist" aria-label="Collab requests" className={SWITCH_TRACK}>
+          <Thumb selected={tab} />
           {TABS.map((t) => {
             const on = t.id === tab;
             const n = count(t.status);
@@ -111,7 +111,7 @@ export default function Requests() {
                 aria-controls="dash-list"
                 type="button"
                 onClick={() => setTab(t.id)}
-                className={`relative flex h-10 flex-auto items-center justify-center gap-1 whitespace-nowrap rounded-[10px] px-1.5 text-[13px] font-medium sm:basis-0 sm:gap-1.5 sm:px-2 sm:text-[14px] transition-colors duration-200 ${on ? "text-ink" : "text-muted hover:text-ink"}`}
+                className={`${SWITCH_TAB} flex flex-auto items-center justify-center gap-1 px-1.5 max-sm:text-[13px] sm:basis-0 sm:gap-1.5 sm:px-2 ${on ? "text-ink" : "text-muted hover:text-ink"}`}
               >
                 <span className="relative">{t.label}</span>
                 {/* only New carries a count: red while it holds something unopened, grey once it's all been read */}

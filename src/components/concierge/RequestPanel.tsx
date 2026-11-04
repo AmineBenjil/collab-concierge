@@ -7,7 +7,7 @@ import { forwardMessage, shortDate, type Check, type Creator, type Fit, type Soc
 import { useToast } from "./Shell";
 import { getDeclineMessage, saveDeclineMessage } from "./store";
 import { BrandIcon } from "../Logo";
-import Proposal, { PROPOSAL_VERSIONS, ProposalSwitcher, type ProposalVersion } from "./Proposal";
+import Proposal from "./Proposal";
 import { copyText, EASE } from "./ui";
 
 type Props = {
@@ -36,21 +36,6 @@ export default function RequestPanel(props: Props) {
      compact: the bio is about to slide under it, so the header takes over the name */
   const [scrolled, setScrolled] = useState(false);
   const [compact, setCompact] = useState(false);
-  /* which "Their proposal" design is showing, kept per browser while Tony compares them */
-  const [version, setVersion] = useState<ProposalVersion>(() => {
-    try {
-      const saved = localStorage.getItem("proposal-version");
-      return PROPOSAL_VERSIONS.find((v) => v.id === saved)?.id ?? "deal";
-    } catch {
-      return "deal";
-    }
-  });
-  const pick = (v: ProposalVersion) => {
-    setVersion(v);
-    try {
-      localStorage.setItem("proposal-version", v);
-    } catch {}
-  };
 
   /* hold the page still underneath, start keyboard focus on the panel, give it back on close */
   useEffect(() => {
@@ -129,7 +114,6 @@ export default function RequestPanel(props: Props) {
           <Body
             key={creator.id}
             {...props}
-            version={version}
             onScrollState={(s, c) => {
               setScrolled(s);
               setCompact(c);
@@ -137,19 +121,12 @@ export default function RequestPanel(props: Props) {
           />
         </AnimatePresence>
       </motion.aside>
-      <motion.div
-        className="absolute left-[calc(50%+290px)] top-1/2 hidden -translate-y-1/2 xl:block"
-        variants={{ hidden: { opacity: 0, x: -8 }, shown: { opacity: 1, x: 0 } }}
-        transition={{ duration: 0.4, ease: EASE, delay: 0.1 }}
-      >
-        <ProposalSwitcher value={version} onChange={pick} />
-      </motion.div>
     </motion.div>
   );
 }
 
 /* keyed by creator, so stepping to the next one starts fresh at the top */
-function Body({ creator: c, status, business, version, onPrev, onNext, onClose, onDecide, onScrollState }: Props & { version: ProposalVersion; onScrollState: (scrolled: boolean, compact: boolean) => void }) {
+function Body({ creator: c, status, business, onPrev, onNext, onClose, onDecide, onScrollState }: Props & { onScrollState: (scrolled: boolean, compact: boolean) => void }) {
   const [sheet, setSheet] = useState<null | "decline" | "forward">(null);
   const scroller = useRef<HTMLDivElement>(null);
   const bio = useRef<HTMLParagraphElement>(null);
@@ -197,7 +174,7 @@ function Body({ creator: c, status, business, version, onPrev, onNext, onClose, 
         <div className="flex shrink-0 flex-col gap-3 bg-[#f2f2f2]">
           <FitChecker creator={c} status={status} />
           <Profile creator={c} bioRef={bio} />
-          <Proposal creator={c} version={version} />
+          <Proposal creator={c} />
           <Review creator={c} />
           <Section>
             <div className="flex flex-col gap-3">
@@ -601,15 +578,18 @@ function CopyLink({ text, label }: { text: string; label: string }) {
 }
 
 function Contacts({ creator: c, className = "" }: { creator: Creator; className?: string }) {
-  const rows: { label: string; value: string; href?: string; icon: string; note?: string }[] = [{ label: "Email", value: c.email, href: `mailto:${c.email}`, icon: "/img/request/email.svg" }];
+  /* copy: what Copy puts on the clipboard, when it isn't the text shown */
+  const rows: { label: string; value: string; href?: string; copy?: string; icon: string; note?: string }[] = [{ label: "Email", value: c.email, href: `mailto:${c.email}`, icon: "/img/request/email.svg" }];
   if (c.phone) rows.push({ label: "Phone", value: c.phone, href: `tel:${c.phone.replace(/[^\d+]/g, "")}`, icon: "/img/request/phone.svg" });
-  rows.push({ label: "Instagram", value: `@${c.handle}`, href: `https://www.instagram.com/${c.handle}`, icon: "/img/request/instagram.svg" });
+  /* the profile link itself, shown without the https://www., and copied in full */
+  const ig = `https://www.instagram.com/${c.handle}`;
+  rows.push({ label: "Instagram", value: `instagram.com/${c.handle}`, href: ig, copy: ig, icon: "/img/request/instagram.svg" });
   /* what they typed for "Where are you based?" in the creator flow */
   if (c.proposal.based && c.proposal.based !== "Not stated") rows.push({ label: "Address", note: "for shipping", value: c.proposal.based, icon: "/img/request/based.svg" });
 
   return (
     <ul className={`flex flex-col items-center gap-0.5 rounded-[12px] outline-solid outline-[0.5px] -outline-offset-[0.5px] outline-[#e3e3e3] bg-[#fafafa] px-3 py-1 ${className}`}>
-      {rows.map(({ label, value, href, icon, note }, i) => (
+      {rows.map(({ label, value, href, copy, icon, note }, i) => (
         <li key={label} className="contents">
           {i > 0 && <Rule src="rule-contact" />}
           <div className="flex w-full items-center justify-between gap-3 py-2">
@@ -622,7 +602,7 @@ function Contacts({ creator: c, className = "" }: { creator: Creator; className?
                 <span className="block truncate">{value}</span>
               )}
             </Row>
-            <CopyLink text={value} label={label.toLowerCase()} />
+            <CopyLink text={copy ?? value} label={label.toLowerCase()} />
           </div>
         </li>
       ))}

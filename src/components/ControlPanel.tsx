@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { useControls, type AddressAsk, type HeroBg } from "./controls";
+import { useControls, type AddressAsk, type HeroBg, type SettingsLook, type StageBg } from "./controls";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -17,6 +17,17 @@ const HERO_OPTIONS: { value: HeroBg; label: string; hint: string }[] = [
 const ADDRESS_OPTIONS: { value: AddressAsk; label: string; hint: string }[] = [
   { value: "local", label: "Local spot", hint: "City or area" },
   { value: "shipping", label: "Ships products", hint: "Full address" },
+];
+
+const STAGE_OPTIONS: { value: StageBg; label: string; hint: string }[] = [
+  { value: "gradient", label: "Gradient", hint: "Lilac wash" },
+  { value: "white", label: "White", hint: "Plain" },
+];
+
+const SETTINGS_OPTIONS: { value: SettingsLook; label: string; hint: string }[] = [
+  { value: "a", label: "A", hint: "Inline list" },
+  { value: "b", label: "B", hint: "Switch" },
+  { value: "c", label: "C", hint: "Preview" },
 ];
 
 /* jump straight to any screen of the demo without walking the flows */
@@ -31,6 +42,8 @@ const SHORTCUTS: { group: string; links: { label: string; href?: string }[] }[] 
       { label: "You're live", href: `/share${q}` },
       { label: "Requests", href: `/requests${q}` },
       { label: "A creator pop-up", href: `/requests${q}&open=mia` },
+      { label: "Customize", href: `/customize${q}` },
+      { label: "Settings", href: `/settings${q}` },
     ],
   },
   {
@@ -40,7 +53,6 @@ const SHORTCUTS: { group: string; links: { label: string; href?: string }[] }[] 
       { label: "Creator flow, as a creator", href: `/c/${DEMO}` },
     ],
   },
-  { group: "Not built yet", links: [{ label: "Customize" }] },
 ];
 
 const noop = () => () => {};
@@ -53,7 +65,7 @@ function useEmbedded() {
 export default function ControlPanel() {
   const [open, setOpen] = useState(false);
   const [section, setSection] = useState<"shortcuts" | "look" | null>("shortcuts");
-  const { heroBg, setHeroBg, address, setAddress } = useControls();
+  const { heroBg, setHeroBg, address, setAddress, stageBg, setStageBg, settingsLook, setSettingsLook } = useControls();
   const pathname = usePathname();
   const embedded = useEmbedded();
   const ref = useRef<HTMLDivElement>(null);
@@ -133,6 +145,8 @@ export default function ControlPanel() {
               <Section title="Look" hint="Theme and versions" open={section === "look"} onToggle={() => toggle("look")}>
                 <Toggle legend="Hero background" options={HERO_OPTIONS} value={heroBg} onChange={setHeroBg} />
                 <Toggle legend="Creator flow, step 4" options={ADDRESS_OPTIONS} value={address} onChange={setAddress} />
+                <Toggle legend="Customize, preview background" options={STAGE_OPTIONS} value={stageBg} onChange={setStageBg} />
+                <Toggle legend="Settings page" options={SETTINGS_OPTIONS} value={settingsLook} onChange={setSettingsLook} />
               </Section>
             </div>
           </motion.div>
@@ -158,7 +172,7 @@ function Toggle<T extends string>({ legend, options, value, onChange }: { legend
   return (
     <fieldset className="px-2 pb-1 pt-2">
       <legend className="text-[13px] font-medium text-ink-2">{legend}</legend>
-      <div className="mt-2 grid grid-cols-2 gap-1 rounded-[14px] bg-[#f3f2f9] p-1">
+      <div className={`mt-2 grid gap-1 rounded-[14px] bg-[#f3f2f9] p-1 ${options.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
         {options.map((o) => {
           const on = value === o.value;
           return (

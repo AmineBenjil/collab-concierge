@@ -6,6 +6,8 @@ import { displayName } from "../names";
 import { useHandle } from "./store";
 import { CopyButton, Rise } from "./ui";
 
+const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
 /* the Requests page's request card: hairline border, no resting shadow */
 const BOX = "rounded-[18px] border border-[#ececf1] bg-white";
 
@@ -14,7 +16,13 @@ export default function Share() {
   const handle = useHandle();
   const name = displayName(handle);
   const link = `benable.com/c/${handle}`;
-  const reply = `Thanks for reaching out! We handle collab requests here: ${link}. Takes a couple minutes and we'll get back to you.`;
+  const url = `https://${link}`;
+  /* the reply around its link: shown with the short link, copied with the full one in the plain text (so a DM
+     box turns it into a link) and as a real link in the rich text (so mail, Notes and Slack keep it clickable) */
+  const before = "Thanks for reaching out! We handle collab requests here: ";
+  const after = ". Takes a couple minutes and we'll get back to you.";
+  const reply = `${before}${url}${after}`;
+  const replyHtml = `${escapeHtml(before)}<a href="${escapeHtml(url)}">${escapeHtml(link)}</a>${escapeHtml(after)}`;
 
   return (
     <main className="relative mx-auto w-full max-w-[600px] px-5 pb-24 pt-[96px] sm:pt-[112px]">
@@ -76,10 +84,16 @@ export default function Share() {
                 <span className="rounded-[18px] rounded-bl-[6px] bg-[#eef2f5] px-3.5 py-2 text-[14px] leading-[21px] text-ink">hii! would love to collab 💜</span>
               </div>
               <div className="flex justify-end">
-                <div className="max-w-[88%] rounded-[16px] sm:max-w-[428px] rounded-br-[4px] bg-[#5e49f0] px-4 py-3 text-[14.5px] leading-[20px] text-white">{reply}</div>
+                <div className="max-w-[88%] rounded-[16px] sm:max-w-[428px] rounded-br-[4px] bg-[#5e49f0] px-4 py-3 text-[14.5px] leading-[20px] text-white">
+                  {before}
+                  <a href={url} target="_blank" rel="noopener" className="font-medium underline decoration-white/60 underline-offset-2 transition-[text-decoration-color] hover:decoration-white">
+                    {link}
+                  </a>
+                  {after}
+                </div>
               </div>
               <div className="flex justify-end">
-                <CopyButton text={reply} label="Copy reply" />
+                <CopyButton text={reply} html={replyHtml} label="Copy reply" />
               </div>
             </div>
           </div>

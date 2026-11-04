@@ -62,7 +62,7 @@ export default function PreviewDevice({ handle }: { handle: string }) {
 
 /* The phone itself: a creator's link running in an iframe at true iPhone points, scaled into the real
    frame PNG. Its height comes from className; the width follows the frame's ratio. Customize reuses it. */
-export function CreatorPhone({ src, className = "", frameRef }: { src: string; className?: string; frameRef?: Ref<HTMLIFrameElement> }) {
+export function CreatorPhone({ src, className = "", frameRef, glow = true }: { src: string; className?: string; frameRef?: Ref<HTMLIFrameElement>; glow?: boolean }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState<number | null>(null);
 
@@ -81,7 +81,7 @@ export function CreatorPhone({ src, className = "", frameRef }: { src: string; c
 
   return (
     <div ref={wrap} className={`relative ${className}`} style={{ aspectRatio: `1 / ${FRAME_RATIO}` }}>
-      <div className="pointer-events-none absolute inset-x-[10%] bottom-[2%] top-[6%] rounded-[60px] bg-[rgba(50,25,140,0.35)] blur-[40px]" />
+      {glow && <div className="pointer-events-none absolute inset-x-[10%] bottom-[2%] top-[6%] rounded-[60px] bg-[rgba(50,25,140,0.35)] blur-[40px]" />}
       <div className="absolute bg-black" style={screenBox} />
       <div className="absolute overflow-hidden bg-white" style={{ ...screenBox, isolation: "isolate" }}>
         <div className="ios absolute left-0 top-0 origin-top-left overflow-hidden bg-white" style={{ width: PT_W, height: PT_H, transform: `scale(${s})`, opacity: scale === null ? 0 : 1 }}>
